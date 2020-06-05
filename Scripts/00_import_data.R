@@ -32,40 +32,8 @@ library(glamr)
   drive_auth()
 
 
-# GDRIVE IMPORT FUNCTION --------------------------------------------------
-
-
-  import_drivefile <- function(drive_folder, filename, folderpath = "Data", zip = TRUE){
-    
-    #get files + ids from google drive folder
-      files <- drive_ls(as_id(fldr))
-    
-    #pull id for specific file
-      id <- files %>% 
-        filter(name == filename) %>% 
-        pull(id)
-      
-    #download file and store in Data folder
-      drive_download(as_id(id), path = file.path(folderpath, filename), overwrite = TRUE)
-    
-    if(zip == TRUE){
-      #zip file
-      orig_wd <- getwd()
-      setwd(folderpath)
-      filename %>% 
-        str_replace("csv$", "zip") %>% 
-        zip(filename)
-      #remove 
-      unlink(filename)
-      setwd(orig_wd)
-    }
-    
-  }
-
-
 # IMPORT ------------------------------------------------------------------
 
-  
   import_drivefile(drive_fldr, tx_file)
   import_drivefile(drive_fldr, pd8_file)
 
