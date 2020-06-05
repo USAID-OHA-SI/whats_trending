@@ -11,6 +11,7 @@
 
 library(googledrive)
 library(tidyverse)
+library(glamr)
 
 
 # GLOBAL VARIABLES --------------------------------------------------------
@@ -21,6 +22,11 @@ library(tidyverse)
   
   pd8_file <- "HFR_2020.08_Tableau_20200604.csv"
 
+  
+# SETUP FOLDERS -----------------------------------------------------------
+  
+  folder_setup()  
+  
 # OAUTH -------------------------------------------------------------------
   
   drive_auth()
@@ -29,7 +35,7 @@ library(tidyverse)
 # GDRIVE IMPORT FUNCTION --------------------------------------------------
 
 
-  import_file <- function(drive_folder, filename, folderpath = "Data", zip = TRUE){
+  import_drivefile <- function(drive_folder, filename, folderpath = "Data", zip = TRUE){
     
     #get files + ids from google drive folder
       files <- drive_ls(as_id(fldr))
