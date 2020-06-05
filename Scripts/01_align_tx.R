@@ -1,9 +1,10 @@
-## PROJECT:  Pump up the jam
+## PROJECT:  whats trending
 ## AUTHOR:   achafetz | USAID
 ## LICENSE:  MIT
 ## PURPOSE:  align FY20 HFR data
+## NOTE:     migrated over from pump_up_the_jam
 ## DATE:     2020-05-05
-## UPDATED:  2020-05-29
+## UPDATED:  2020-06-05
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -23,15 +24,30 @@ dataout <- "Dataout"
 
 # IMPORT ------------------------------------------------------------------
 
+  #files downloaded from Google drive in 00_import_data
+
   #Periods 2020.01-2020.07
-    #https://drive.google.com/open?id=1Ykz8nVBwRLRbiAqOoDM57XxSDcT4EFdZ
     path_sql <- here(datain, "HFR_2020.07_TX_ 20200528.zip")
 
     df_tx <- hfr_read(path_sql)
     
+  #update for 2020.08
+    path_08full <- here(datain, "HFR_2020.08_Tableau_20200604.zip")
+    
+    df_08full <- hfr_read(path_08full)
+    
 
 # CLEAN -------------------------------------------------------------------
 
+  #filter full 2020.08 data to just vars of interest
+    df_08full <- df_08full %>% 
+      filter(indicator %in% c("TX_CURR", "TX_MMD"),
+             hfr_pd == 8)
+    
+  #bind data to Tx dataset
+    df_tx <- bind_rows(df_tx, df_08full)
+    rm(df_08full)
+    
   #remove SQL export row break
     df_tx <- df_tx %>% 
       mutate(primepartner = str_remove(primepartner, "\r$"))
@@ -93,49 +109,3 @@ dataout <- "Dataout"
 # EXPORT DATA -------------------------------------------------------------
 
   write_csv(df_tx, here(dataout, "HFR_FY20_TXCURR.csv"), na = "")    
-
-# EXPLORE -----------------------------------------------------------------
-
-    #site count
-      df_site_cnt_mer <- df_tx %>% 
-        filter(mer_targets > 0) %>% 
-        distinct(operatingunit, orgunituid) %>% 
-        count(operatingunit, name = "sites_mer")
-      
-      df_tx %>% 
-        filter(hfr_results > 0) %>% 
-        distinct(operatingunit, orgunituid, hfr_pd) %>% 
-        count(operatingunit, hfr_pd, name = "sites_hfr") %>% 
-        complete(hfr_pd, nesting(operatingunit), fill = list(n = 0)) %>% 
-        full_join(df_site_cnt_mer) %>% 
-        arrange(operatingunit, hfr_pd) %>% 
-        mutate(sites_hfr = ifelse(is.na(sites_hfr), 0, sites_hfr),
-               completeness = sites_hfr / sites_mer)
-      
-      df_tx_ou <- df_tx %>% 
-        group_by(operatingunit, fy, hfr_pd) %>% 
-        summarise_at(vars(hfr_results, mer_results, mer_targets), sum, na.rm = TRUE) %>% 
-        ungroup() %>% 
-        mutate_all(~ na_if(., -Inf))
-        
-      df_tx_ou  %>% 
-        ggplot(aes(hfr_pd, hfr_results)) +
-        geom_hline(aes(yintercept = mer_targets)) +
-        geom_col() +
-        facet_wrap(~operatingunit, scales = "free_y")
-      
-      
-      df_tx_mech <- df_tx %>% 
-        group_by(operatingunit, fy, hfr_pd, mech_code) %>% 
-        summarise_at(vars(hfr_results, mer_results, mer_targets), sum, na.rm = TRUE) %>% 
-        ungroup() %>% 
-        mutate_all(~ na_if(., -Inf)) %>% 
-        filter_at(vars(hfr_results, mer_results, mer_targets), any_vars(!is.na(.) & . != 0))
-      
-      df_tx_mech  %>% 
-        ggplot(aes(hfr_pd, hfr_results)) +
-        geom_hline(aes(yintercept = mer_targets)) +
-        geom_col() +
-        facet_wrap(~operatingunit + mech_code, scales = "free_y",  
-                   labeller = label_wrap_gen(multi_line=FALSE))
-      
