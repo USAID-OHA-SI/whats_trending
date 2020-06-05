@@ -66,6 +66,6 @@ library(glamr)
 # IMPORT ------------------------------------------------------------------
 
   
-  import_file(drive_fldr, tx_file)
-  import_file(drive_fldr, pd8_file)
+  import_drivefile(drive_fldr, tx_file)
+  import_drivefile(drive_fldr, pd8_file)
 
