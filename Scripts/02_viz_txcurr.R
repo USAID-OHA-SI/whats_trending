@@ -344,7 +344,7 @@ library(sf)
         mutate(growth = (hfr_results_ipol - lag(hfr_results_ipol, order_by = hfr_pd)) / lag(hfr_results_ipol, order_by = hfr_pd)) %>% 
         ungroup() %>% 
         filter(hfr_pd != 1) %>% 
-        mutate(ou_count = paste0(operatingunit, " (", comma(n), ")"))
+        mutate(ou_count = paste0(operatingunit, " (", comma(n, 1), ")"))
       
     #clean up period
       df_txcurr_comp <- df_txcurr_comp %>% 
