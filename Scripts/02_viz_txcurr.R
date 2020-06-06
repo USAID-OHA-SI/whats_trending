@@ -482,7 +482,7 @@ library(sf)
                       # width = 0.8,
                       colour = grey50k) +
         geom_hline(yintercept = 0) +
-        geom_text(aes(y = 1.15, label = comma(has_hfr_reporting)), color = "gray30",
+        geom_text(aes(y = 1.15, label = comma(has_hfr_reporting, 1)), color = "gray30",
                   size = 3, family = "Source Sans Pro") +
         expand_limits(y = 1.3) +
         facet_grid(type_sitecount ~.) +
@@ -546,6 +546,10 @@ library(sf)
           pull(is_datim_site) %>% 
           max()
         
+        pds <- (min(df_growth_ou$hfr_pd) - 1) %>% 
+          str_pad(2, pad = "0") %>% 
+        paste0("2020.",., "-", max(df_growth_ou$hfr_pd))
+        
         v <- df_growth_ou %>% 
           filter(countryname == ctry_sel) %>% 
           mutate(hfr_pd = str_pad(hfr_pd, 2, pad = "0"),
@@ -559,7 +563,7 @@ library(sf)
           si_style_nolines() +
           labs(x = NULL, y = NULL, 
                title = "Treatment Growth Each Period",
-               subtitle = paste0("only sites reporting in all three periods (",
+               subtitle = paste0("only sites reporting in all ", pds, " periods (",
                                  comma(site_cnt, 1),")"),
                caption = "interpolated data") +
           theme(axis.text.y = element_blank(),
@@ -760,7 +764,7 @@ library(sf)
 
 # PLOT GRAPHIC ------------------------------------------------------------
 
-    lgnd <- image_read("Images/bivar_legend.png")
+    # lgnd <- image_read("Images/bivar_legend.png")
    
     
     viz_combo <- function(ctry_sel){
@@ -807,8 +811,14 @@ library(sf)
 
   ctrys <- df_txcurr %>% 
     filter(hfr_pd == 1) %>% 
-    count(countryname, wt = mer_targets, sort = TRUE) %>% 
+    group_by(countryname) %>% 
+    summarise_at(vars(mer_targets, is_datim_site), sum, na.rm = TRUE) %>% 
+    ungroup() %>% 
+    arrange(desc(mer_targets)) %>%
+    print(n = Inf)
     pull(countryname)
   
   walk(ctrys[1:12], viz_combo)
+  
+  viz_combo(ctrys[13])
   
