@@ -535,21 +535,6 @@ library(sf)
     df_growth_ou <- df_growth_ou %>% 
       left_join(df_pds)
     
-    df_growth_ou %>% 
-      mutate(hfr_pd = str_pad(hfr_pd, 2, pad = "0")) %>% 
-      ggplot(aes(hfr_pd_date_max, delta, group = countryname)) +
-      geom_hline(yintercept = 0) +
-      geom_vline(xintercept = pandemic_date, size = 2, color = "gray70")+
-      geom_point(size = 4, color = heatmap_pal[10]) +
-      geom_path(size = .9, color = heatmap_pal[10]) +
-      # geom_area(alpha = .3, color = heatmap_pal[10], fill = heatmap_pal[10]) +
-      expand_limits(y = c(-.15, .15)) +
-      facet_wrap(~fct_reorder(ou_sitecount, mer_targets, .desc = TRUE)) +
-      scale_y_continuous(label = percent) +
-      labs(x = NULL, y = NULL) +
-      si_style()
-    
-    
     viz_growth <- function(ctry_sel){
       
       site_cnt <- df_growth_ou %>% 
