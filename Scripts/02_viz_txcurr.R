@@ -193,7 +193,7 @@ library(sf)
 
     #site count
       df_comp <- df_comp %>% 
-        mutate(ou_sitecount = paste0(operatingunit, " (", comma(is_datim_site), ")"))
+        mutate(ou_sitecount = paste0(operatingunit, " (", comma(is_datim_site, 1), ")"))
       
     #filter
       df_comp <- df_comp %>% 
@@ -210,7 +210,7 @@ library(sf)
       viz_comp <- df_comp %>% 
         ggplot(aes(date_lab, fct_reorder(ou_sitecount, mer_targets, sum), fill = completeness_band)) +
         geom_tile(color = "white", size = 0.25) +
-        geom_text(aes(label = percent(completeness),
+        geom_text(aes(label = percent(completeness, 1),
                       color = ifelse(completeness_band <= 1, "dark", "light")),
                   size = 2.5, na.rm = TRUE) +
         scale_fill_viridis_c(limits = c(1, 12), label = NULL, direction = -1, na.value = "gray80") +
@@ -263,8 +263,8 @@ library(sf)
         mutate(no_reporting = has_hfr_reporting- is_datim_site,
                share_reporting = has_hfr_reporting/is_datim_site,
                share_noreporting = share_reporting-1,
-               type_sitecount = paste0(site_type, " (", comma(is_datim_site), ")"),
-               ou_sitecount = paste0(countryname, " (", comma(is_datim_site), ")")) %>% 
+               type_sitecount = paste0(site_type, " (", comma(is_datim_site, 1), ")"),
+               ou_sitecount = paste0(countryname, " (", comma(is_datim_site, 1), ")")) %>% 
         left_join(df_pds) %>% 
         mutate(date_lab = paste0(format.Date(hfr_pd_date_max, "%b %d"), "\n(",
                                  str_pad(hfr_pd, 2, pad = "0"), ")"),
@@ -343,8 +343,8 @@ library(sf)
                complete_sites_ipol = ifelse(is.na(complete_sites_ipol), 0, complete_sites_ipol),
                share = complete_sites / all_sites,
                share_ipol = complete_sites_ipol / all_sites,
-               ou_count = paste0(operatingunit, " (", comma(complete_sites), "/", comma(all_sites), ")"),
-               ou_count_ipol = paste0(operatingunit, " (", comma(complete_sites_ipol), "/", comma(all_sites), ")"))
+               ou_count = paste0(operatingunit, " (", comma(complete_sites, 1), "/", comma(all_sites, 1), ")"),
+               ou_count_ipol = paste0(operatingunit, " (", comma(complete_sites_ipol, 1), "/", comma(all_sites, 1), ")"))
       
     #viz, completeness w/ original data
       df_complete_share %>% 
@@ -597,7 +597,7 @@ library(sf)
       group_by(countryname) %>% 
       mutate(delta = (hfr_results_ipol/lag(hfr_results_ipol, order_by = hfr_pd)) -1) %>% 
       ungroup() %>% 
-      mutate(ou_sitecount = paste0(countryname, " (", comma(is_datim_site), ")")) %>% 
+      mutate(ou_sitecount = paste0(countryname, " (", comma(is_datim_site, 1), ")")) %>% 
       filter(hfr_pd != 4)
     
     df_growth_ou <- df_growth_ou %>% 
@@ -643,7 +643,7 @@ library(sf)
           labs(x = NULL, y = NULL, 
                title = "Treatment Growth Each Period",
                subtitle = paste0("only sites reporting in all three periods (",
-                                 comma(site_cnt),")"),
+                                 comma(site_cnt, 1),")"),
                caption = "interpolated data") +
           theme(axis.text.y = element_blank(),
                 axis.text.x = element_blank(),
