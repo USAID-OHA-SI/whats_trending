@@ -251,64 +251,6 @@ library(sf)
       
       ggsave("HFR_TX_Comp.png", path = "Images", width = 10, height = 5.625, dpi = 300)
   
-
-# SITE COUNT PER PERIOD ---------------------------------------------------
-
-      
-      df_rpt_sites <- df_txcurr %>% 
-        mutate(site_type = ifelse(impflag_both == 1, "Large", "Small")) %>% 
-        group_by(countryname, hfr_pd, site_type) %>% 
-        summarise_at(vars(mer_targets, has_hfr_reporting, is_datim_site), sum, na.rm = TRUE) %>% 
-        ungroup() %>% 
-        mutate(no_reporting = has_hfr_reporting- is_datim_site,
-               share_reporting = has_hfr_reporting/is_datim_site,
-               share_noreporting = share_reporting-1,
-               type_sitecount = paste0(site_type, " (", comma(is_datim_site, 1), ")"),
-               ou_sitecount = paste0(countryname, " (", comma(is_datim_site, 1), ")")) %>% 
-        left_join(df_pds) %>% 
-        mutate(date_lab = paste0(format.Date(hfr_pd_date_max, "%b %d"), "\n(",
-                                 str_pad(hfr_pd, 2, pad = "0"), ")"),
-               date_lab = fct_reorder(date_lab, hfr_pd_date_max))
-      
-      
-      viz_rpt_rates <- function(ctry_sel) {
-        df_rpt_sites %>% 
-          filter(countryname == ctry_sel) %>% 
-          ggplot(aes(hfr_pd_date_max, share_reporting)) +
-          # geom_vline(xintercept = pandemic_date, color = "gray80", size = 2, na.rm = TRUE) +
-          # geom_vline(xintercept = df_covid_case10 %>% filter(countryname == ctry_sel) %>% pull(), 
-          #            color = "gray70", size = 2, na.rm = TRUE) +
-          geom_col(aes(y = 1), fill = grey10k, alpha = 0.75) +
-          geom_col(aes(fill = ifelse(hfr_pd_date_max > pandemic_date, "#b1c7b3", "#d8e3d8"))) +
-          geom_errorbar(aes(ymin = share_reporting, ymax = share_reporting), size=0.5, 
-                        # width = 0.8,
-                        colour = grey50k) +
-          geom_hline(yintercept = 0) +
-          geom_text(aes(y = 1.15, label = comma(has_hfr_reporting)), color = "gray30",
-                    size = 3, family = "Source Sans Pro") +
-          expand_limits(y = 1.3) +
-          facet_grid(type_sitecount ~.) +
-          # facet_grid(type_sitecount ~., switch = "y") +
-          scale_fill_identity() +
-          scale_y_continuous(label = percent) +
-          scale_x_date(date_breaks = "4 weeks", date_labels = "%b %d") +
-          labs(x = NULL, y = "share of sites reporting",
-               title = "Sites Reporting Each Period",
-               subtitle = "large sites = contributing 80% of all results/targets",
-               caption = "Completeness derived by comparing HFR reporting against sites with DATIM results/targets"
-          ) +
-          si_style_nolines() +
-          theme(#strip.placement = "outside",
-                plot.title = element_text(size = 11, color = "gray30"),
-                plot.subtitle = element_text(size = 7),
-                plot.caption = element_text(size = 5),
-                axis.text = element_text(size = 7),
-                axis.title = element_text(size = 7),
-                strip.text = element_text(size = 7, hjust = .50) #, face = "bold")
-                )  
-      }
-      
-      
       
 # CONSISTENT REPORTING ----------------------------------------------------
       
@@ -507,7 +449,64 @@ library(sf)
       
     }
      
-      
+    
+# SITE COUNT PER PERIOD ---------------------------------------------------
+    
+    
+    df_rpt_sites <- df_txcurr %>% 
+      mutate(site_type = ifelse(impflag_both == 1, "Large", "Small")) %>% 
+      group_by(countryname, hfr_pd, site_type) %>% 
+      summarise_at(vars(mer_targets, has_hfr_reporting, is_datim_site), sum, na.rm = TRUE) %>% 
+      ungroup() %>% 
+      mutate(no_reporting = has_hfr_reporting- is_datim_site,
+             share_reporting = has_hfr_reporting/is_datim_site,
+             share_noreporting = share_reporting-1,
+             type_sitecount = paste0(site_type, " (", comma(is_datim_site, 1), ")"),
+             ou_sitecount = paste0(countryname, " (", comma(is_datim_site, 1), ")")) %>% 
+      left_join(df_pds) %>% 
+      mutate(date_lab = paste0(format.Date(hfr_pd_date_max, "%b %d"), "\n(",
+                               str_pad(hfr_pd, 2, pad = "0"), ")"),
+             date_lab = fct_reorder(date_lab, hfr_pd_date_max))
+    
+    
+    viz_rpt_rates <- function(ctry_sel) {
+      df_rpt_sites %>% 
+        filter(countryname == ctry_sel) %>% 
+        ggplot(aes(hfr_pd_date_max, share_reporting)) +
+        # geom_vline(xintercept = pandemic_date, color = "gray80", size = 2, na.rm = TRUE) +
+        # geom_vline(xintercept = df_covid_case10 %>% filter(countryname == ctry_sel) %>% pull(), 
+        #            color = "gray70", size = 2, na.rm = TRUE) +
+        geom_col(aes(y = 1), fill = grey10k, alpha = 0.75) +
+        geom_col(aes(fill = ifelse(hfr_pd_date_max > pandemic_date, "#b1c7b3", "#d8e3d8"))) +
+        geom_errorbar(aes(ymin = share_reporting, ymax = share_reporting), size=0.5, 
+                      # width = 0.8,
+                      colour = grey50k) +
+        geom_hline(yintercept = 0) +
+        geom_text(aes(y = 1.15, label = comma(has_hfr_reporting)), color = "gray30",
+                  size = 3, family = "Source Sans Pro") +
+        expand_limits(y = 1.3) +
+        facet_grid(type_sitecount ~.) +
+        # facet_grid(type_sitecount ~., switch = "y") +
+        scale_fill_identity() +
+        scale_y_continuous(label = percent) +
+        scale_x_date(date_breaks = "4 weeks", date_labels = "%b %d") +
+        labs(x = NULL, y = "share of sites reporting",
+             title = "Sites Reporting Each Period",
+             subtitle = "large sites = contributing 80% of all results/targets",
+             caption = "Completeness derived by comparing HFR reporting against sites with DATIM results/targets"
+        ) +
+        si_style_nolines() +
+        theme(#strip.placement = "outside",
+          plot.title = element_text(size = 11, color = "gray30"),
+          plot.subtitle = element_text(size = 7),
+          plot.caption = element_text(size = 5),
+          axis.text = element_text(size = 7),
+          axis.title = element_text(size = 7),
+          strip.text = element_text(size = 7, hjust = .50) #, face = "bold")
+        )  
+    }
+    
+    
 
 # GROWTH CHANGE -----------------------------------------------------------
 
