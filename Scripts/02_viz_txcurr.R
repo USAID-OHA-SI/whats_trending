@@ -309,34 +309,6 @@ library(sf)
       }
       
       
-      df_rpt_sites %>% 
-        ggplot(aes(date_lab)) +
-        geom_col(aes(y = share_reporting), fill = heatmap_pal[10]) +
-        geom_col(aes(y = share_noreporting), fill = heatmap_pal[6]) +
-        geom_hline(yintercept = 0) +
-        facet_wrap( ~ fct_reorder(ou_sitecount, mer_targets, .desc = TRUE)) +
-        scale_y_continuous(label = percent) +
-        si_style() 
-      
-      
-      df_rpt_sites %>% 
-        ggplot(aes(date_lab, share_reporting)) +
-        geom_col(fill = heatmap_pal[10]) +
-        geom_col(aes(y = 1), fill = NA, color = heatmap_pal[10]) +
-        geom_hline(yintercept = 0) +
-        geom_text(aes(y = 1.15, label = comma(has_hfr_reporting)), color = "gray30",
-                  family = "Source Sans Pro") +
-        expand_limits(y = 1.3) +
-        facet_wrap( ~ fct_reorder(ou_sitecount, mer_targets, .desc = TRUE)) +
-        scale_y_continuous(label = percent) +
-        labs(x = NULL, y = "share of sites reporting",
-             title = "SITES REPORTING EACH PERIOD BY OPERATING UNIT",
-             caption = "Note: Completeness derived by comparing HFR reporting against sites with DATIM results/targets"
-        ) +
-        si_style_nolines() +
-        theme(plot.caption = element_text(color = "gray30"))  
-      
-      ggsave("HFR_TX_SiteCount.png", path = "Images", width = 10, height = 5.625, dpi = 300)
       
 # CONSISTENT REPORTING ----------------------------------------------------
       
