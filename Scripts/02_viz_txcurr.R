@@ -454,7 +454,7 @@ library(sf)
     
     
     df_rpt_sites <- df_txcurr %>% 
-      mutate(site_type = ifelse(impflag_both == 1, "Large", "Small")) %>% 
+      mutate(site_type = ifelse(impflag_targets == 1, "Large", "Small")) %>% 
       group_by(countryname, hfr_pd, site_type) %>% 
       summarise_at(vars(mer_targets, has_hfr_reporting, is_datim_site), sum, na.rm = TRUE) %>% 
       ungroup() %>% 
@@ -492,7 +492,7 @@ library(sf)
         scale_x_date(date_breaks = "4 weeks", date_labels = "%b %d") +
         labs(x = NULL, y = "share of sites reporting",
              title = "Sites Reporting Each Period",
-             subtitle = "large sites = contributing 80% of all results/targets",
+             subtitle = "large sites = contributing 80% of all targets",
              caption = "Completeness derived by comparing HFR reporting against sites with DATIM results/targets"
         ) +
         si_style_nolines() +
