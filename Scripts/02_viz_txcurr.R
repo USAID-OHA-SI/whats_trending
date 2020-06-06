@@ -3,7 +3,7 @@
 ## LICENSE:  MIT
 ## PURPOSE:  review and visualize TX_CURR HFR data
 ## DATE:     2020-05-13
-## UPDATED:  2020-05-28
+## UPDATED:  2020-06-06
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -66,25 +66,15 @@ library(sf)
 
 # IMPORT ------------------------------------------------------------------
 
-  #data created in 12_align_tx
+  #data created in 01_align_tx
     df_tx <- vroom(here(dataout, "HFR_FY20_TXCURR.csv"))
-
-  #import large sites flag 02_datim_flags
-    df_datim_wgts <- list.files(dataout, "DATIM_FLAGS_[[:digit:]]+\\.csv", full.names = TRUE) %>% 
-      vroom(col_types = c(.default = "d",
-                          orgunituid = "c",
-                          indicator = "c",
-                          operatingunit = "c",
-                          mech_code = "c",
-                          fy = "c")) %>% 
-      filter(indicator == "TX_CURR")
 
   #org hierarchy
     df_orgheirarchy <- list.files(datain, "org", full.names = TRUE) %>% 
-      read_csv()
+      vroom()
 
   #covid
-    df_covid <- COVIDutilities::pull_jhu_covid()
+    df_covid <- pull_jhu_covid()
     
   #countyr names for mapping
     world <- ne_countries()
@@ -184,16 +174,6 @@ library(sf)
 
   #TBD
     
-
-# FLAG HIGH VOLUME (TARGET) SITES -----------------------------------------
-
-  #add in flag for large sites
-    df_datim_wgts <- df_datim_wgts  %>% 
-      select(orgunituid, mech_code, 
-             impflag_targets, impflag_results, impflag_both)
-    
-  #binding flag onto tx_curr data
-    df_txcurr <- left_join(df_txcurr, df_datim_wgts)
     
 # CALCULATE COMPLETENESS --------------------------------------------------
     
