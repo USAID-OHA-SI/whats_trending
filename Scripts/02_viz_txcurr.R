@@ -252,6 +252,7 @@ library(sf)
       ggsave("HFR_TX_Comp.png", path = "Images", width = 10, height = 5.625, dpi = 300)
   
       
+      
 # CONSISTENT REPORTING ----------------------------------------------------
       
     #identify the number of periods
@@ -322,6 +323,61 @@ library(sf)
         theme(axis.text.x = element_blank())
 
       ggsave("HFR_TX_SitesAllPds_Ipol.png", path = "Images", width = 10, height = 5.625, dpi = 300)
+
+# MMD ---------------------------------------------------------------------
+
+      df_mmd_ctry <- df_mmd %>%
+        group_by(operatingunit, hfr_pd) %>% 
+        summarise_at(vars(starts_with("tx")), sum, na.rm = TRUE) %>% 
+        ungroup() 
+      
+      ctry_tx_targets <- df_tx %>% 
+        filter(hfr_pd == max(hfr_pd)) %>% 
+        count(operatingunit, wt = mer_targets, sort = TRUE) %>% 
+        pull(operatingunit)
+      
+      
+      df_mmd_ctry <- df_mmd_ctry %>% 
+        gather(indicator, value, starts_with("tx_mmd")) %>% 
+        mutate(indicator = ifelse(indicator %in% c("tx_mmd.35", "tx_mmd.o6"), "tx_mmd.o3", indicator)) %>% 
+        group_by(operatingunit, indicator, hfr_pd, tx_curr) %>% 
+        summarise(value = sum(value, na.rm = TRUE)) %>% 
+        group_by(operatingunit, hfr_pd) %>% 
+        mutate(share = value / sum(value)) %>% 
+        ungroup() %>% 
+        mutate(operatingunit = factor(operatingunit, ctry_tx_targets),
+               indicator = factor(indicator, c("tx_mmd.unkwn", "tx_mmd.u3", "tx_mmd.o3")))
+      
+      df_mmd_ctry <-  left_join(df_mmd_ctry, df_pds)
+      
+      df_covid_case10_ctry <- df_covid_case10 %>% 
+        filter(countryname %in% unique(df_mmd_ctry$operatingunit)) %>% 
+        mutate(operatingunit = factor(countryname, ctry_tx_targets))
+      
+      
+      df_mmd_ctry %>% 
+        filter(indicator != "tx_mmd.unkwn",
+               !is.na(operatingunit)) %>% 
+        ggplot(aes(hfr_pd_date_max, share)) +
+        geom_col(data = df_covid_case10_ctry, 
+                 aes(date, 1), color = "gray70") +
+        geom_path(aes(group = indicator, color = indicator)) +
+        geom_point(aes(group = indicator, color = indicator)) +
+        facet_wrap(~ operatingunit) +
+        scale_y_continuous(label = percent, breaks = c(0,.5,1)) +
+        scale_x_date(date_breaks = "2 month", date_labels = "%b") +
+        scale_color_manual(values = c(heatmap_pal[10], "gray80")) +
+        si_style_ygrid() +
+        labs(x = NULL, y = NULL,
+             title = "NO MAJOR SHIFTS TOWARDS INCREASED MMD",
+             subtitle = "+3mo of MMD, countries ordered by TX_CURR targets") + 
+        theme(legend.position = "none",
+              axis.text.x = element_text(size = 9),
+              axis.text.y = element_text(size = 9),
+              panel.spacing = unit(1, "lines"))
+      
+      ggsave("HFR_MMD.png", path = "Images", width = 10, height = 5.625, dpi = 300)  
+      
       
 # GROWTH TRENDS FOR CONSISTENT SITES --------------------------------------
       
@@ -355,11 +411,12 @@ library(sf)
     
     #viz
       df_txcurr_comp %>% 
-        ggplot(aes(date_lab, growth, group = ou_count)) +
+        ggplot(aes(hfr_pd_date_max, growth, group = ou_count)) +
         geom_col(aes(fill = growth > 0)) +
         geom_hline(yintercept = 0, color = "gray40") +
         facet_wrap(~ fct_reorder(ou_count, mer_targets, sum, .desc = TRUE), scales = "free_y") +
         scale_y_continuous(labels = percent_format(.1)) +
+        scale_x_date(date_breaks = "8 weeks", date_labels = "%b %d") +
         scale_fill_manual(values = c(heatmap_pal[6], "#433E85FF")) +
         # scale_fill_manual(values = c(posneg_pal[1], posneg_pal[3])) +
         labs(x = NULL, y = NULL,
@@ -367,6 +424,7 @@ library(sf)
              subtitle =  "only sites that report every period (using interpolated data)") +
         si_style_ygrid() +
         theme(strip.text = element_text(face = "bold"),
+              axis.text.x = element_text(size = 8),
               panel.spacing = unit(2, "lines"),
               legend.position = "none")
       
@@ -605,15 +663,6 @@ library(sf)
     df_repgap <- left_join(df_repgap, df_crosswalk) %>% 
       select(-iso)
       
-    # df_repgap <- df_repgap %>% 
-    #   left_join(iso_map, by = c("countryname" = "operatingunit")) %>% 
-    #   select(-regional)
-    
-    df_repgap <- df_orgheirarchy %>% 
-      select(orgunituid, latitude, longitude) %>% 
-      left_join(df_repgap, .)
-    
-
 
     viz_rpt_map <- function(ctry_sel){
       
@@ -625,8 +674,13 @@ library(sf)
         ctry_sel_ne <- unique(df_repgap_ctry$countryname_ne)
       
       #country and admin1 borders
-        ctry_adm1 <- ne_states(country = ctry_sel_ne, returnclass = 'sf') 
-        ctry_adm0 <- summarise(ctry_adm1, placeholder = max(min_zoom))
+        if(ctry_sel == "South Sudan"){
+          ctry_adm0 <-  ne_countries(country = ctry_sel, scale = 'medium', returnclass = 'sf')
+          ctry_adm1 <- ctry_adm0
+        } else {
+          ctry_adm1 <- ne_states(country = ctry_sel_ne, returnclass = 'sf') 
+          ctry_adm0 <- summarise(ctry_adm1, placeholder = max(min_zoom))
+        }
         
       #deal with SA island
         if(ctry_sel == "South Africa") {
@@ -806,7 +860,7 @@ library(sf)
     
     }
     
-    viz_combo("South Africa")
+    viz_combo("South Sudan")
     
 
   ctrys <- df_txcurr %>% 
@@ -815,10 +869,11 @@ library(sf)
     summarise_at(vars(mer_targets, is_datim_site), sum, na.rm = TRUE) %>% 
     ungroup() %>% 
     arrange(desc(mer_targets)) %>%
-    print(n = Inf)
+    # print(n = Inf)
     pull(countryname)
   
-  walk(ctrys[1:12], viz_combo)
+  walk(ctrys[27:39], viz_combo)
+  walk(ctrys, viz_combo)
   
   viz_combo(ctrys[13])
   
