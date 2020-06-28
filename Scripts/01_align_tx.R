@@ -78,27 +78,6 @@ dataout <- "Dataout"
       mutate_all(~ na_if(., "\\N")) %>% 
       mutate_all(~ na_if(., "NULL"))
     
-  #pull mechlist from DATIM to assign orphan UIDs to OUs
-    df_mechlist <-  pull_mech()
-    
-  #rename mechlist names for merging
-    df_mechlist <- df_mechlist %>% 
-      select(mech_code, 
-             operatingunit_d = operatingunit,
-             mech_name_d = mech_name,
-             primepartner_d = primepartner)
-    
-  #merge melist on to fix orphaned UIDs
-    df_tx <- df_tx %>% 
-      left_join(df_mechlist, by = "mech_code") 
-    
-  #replace orphaned UIDs so they have an OU home
-    df_tx <- df_tx %>% 
-      mutate(operatingunit = ifelse(is.na(operatingunit), operatingunit_d, operatingunit),
-             mech_name = ifelse(is.na(mech_name), mech_name_d, mech_name),
-             primepartner_d = ifelse(is.na(primepartner), primepartner_d, primepartner_d)) %>% 
-      select(-ends_with("_d"))
-  
   #filter cols with no mer or hfr values 
     df_tx <- df_tx %>% 
       filter_at(vars(starts_with("mer"), "hfr_results"), any_vars(!is.na(.) & .!= 0))
