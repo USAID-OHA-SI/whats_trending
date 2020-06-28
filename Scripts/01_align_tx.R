@@ -4,7 +4,7 @@
 ## PURPOSE:  align FY20 HFR data
 ## NOTE:     migrated over from pump_up_the_jam
 ## DATE:     2020-05-05
-## UPDATED:  2020-06-06
+## UPDATED:  2020-06-28
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -15,38 +15,33 @@ library(here)
 library(Wavelength)
 
 
-
 # GLOBAL VARIABLES --------------------------------------------------------
 
 datain <- "Data"
 dataout <- "Dataout"
 
-
 # IMPORT ------------------------------------------------------------------
 
-  #files downloaded from Google drive in 00_import_data
+  #function
+    import_sqlview <- function(file){
+      df <- file %>% 
+        hfr_read() %>% 
+        filter(indicator %in% c("TX_CURR", "TX_MMD"))
+      
+      if(str_detect(file, "456"))
+        df <- filter(df, hfr_pd != 6)
+      
+      return(df)
+      
+    }
+  
+  #data created in 01_align_tx
+    df_tx <- list.files("Data", "Viewforperiods.*_06242020", full.names = TRUE) %>% 
+      map_dfr(import_sqlview)
 
-  #Periods 2020.01-2020.07
-    path_sql <- here(datain, "HFR_2020.07_TX_ 20200528.zip")
-
-    df_tx <- hfr_read(path_sql)
-    
-  #update for 2020.08
-    path_08full <- here(datain, "HFR_2020.08_Tableau_20200604.zip")
-    
-    df_08full <- hfr_read(path_08full)
     
 
 # CLEAN -------------------------------------------------------------------
-
-  #filter full 2020.08 data to just vars of interest
-    df_08full <- df_08full %>% 
-      filter(indicator %in% c("TX_CURR", "TX_MMD"),
-             hfr_pd == 8)
-    
-  #bind data to Tx dataset
-    df_tx <- bind_rows(df_tx, df_08full)
-    rm(df_08full)
     
   #remove SQL export row break
     df_tx <- df_tx %>% 
