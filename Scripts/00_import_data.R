@@ -25,7 +25,7 @@ library(glamr)
     drive_auth()
   
   #drive location
-    fldr_id <- "18HBUdKSSk09oChhQanCOIbHK5IW8NE_K"
+    fldr_id <- "1oEFvmfFnTc9eAlSzxhbBG2C7mYCcs1YJ"
   
   #files
     files <- drive_ls(as_id(fldr_id), pattern = "View") %>% pull(name)
