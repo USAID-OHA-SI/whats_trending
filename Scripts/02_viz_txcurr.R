@@ -346,7 +346,7 @@ library(sf)
         mutate(share = value / sum(value)) %>% 
         ungroup() %>% 
         mutate(operatingunit = factor(operatingunit, ctry_tx_targets),
-               indicator = factor(indicator, c("tx_mmd.unkwn", "tx_mmd.u3", "tx_mmd.o3")))
+               indicator = factor(indicator, c("tx_mmd.unkwn", "tx_mmd.o3", "tx_mmd.u3")))
       
       df_mmd_ctry <-  left_join(df_mmd_ctry, df_pds)
       
@@ -357,26 +357,30 @@ library(sf)
       
       df_mmd_ctry %>% 
         filter(indicator != "tx_mmd.unkwn",
-               !is.na(operatingunit)) %>% 
+               !is.na(operatingunit),
+               !is.nan(share)) %>% 
         ggplot(aes(hfr_pd_date_max, share)) +
         geom_col(data = df_covid_case10_ctry, 
                  aes(date, 1), color = "gray70") +
-        geom_path(aes(group = indicator, color = indicator)) +
+        geom_path(aes(group = indicator, color = indicator), size = .9) +
         geom_point(aes(group = indicator, color = indicator)) +
         facet_wrap(~ operatingunit) +
         scale_y_continuous(label = percent, breaks = c(0,.5,1)) +
         scale_x_date(date_breaks = "2 month", date_labels = "%b") +
-        scale_color_manual(values = c(heatmap_pal[10], "gray80")) +
+        scale_color_manual(values = c(heatmap_pal[10], "gray80"),
+                           labels = c("+3 months","<3 months")) +
         si_style_ygrid() +
         labs(x = NULL, y = NULL,
-             title = "NO MAJOR SHIFTS TOWARDS INCREASED MMD",
-             subtitle = "+3mo of MMD, countries ordered by TX_CURR targets") + 
-        theme(legend.position = "none",
+             title = "SOME SHIFTS TOWARDS INCREASED MMD IN THE FACE OF COVID-19",
+             subtitle = "countries ordered by TX_CURR targets",
+             caption = "Source: HFR [2020-07-05]") + 
+        theme(#legend.position = "none",
+              legend.title = element_blank(),
               axis.text.x = element_text(size = 9),
               axis.text.y = element_text(size = 9),
               panel.spacing = unit(1, "lines"))
       
-      ggsave("HFR_MMD.png", path = "Images", width = 10, height = 5.625, dpi = 300)  
+      ggsave("HFR_MMD.png", path = "Images", width = 12, height = 7, dpi = 400)  
       
       
 # GROWTH TRENDS FOR CONSISTENT SITES --------------------------------------
