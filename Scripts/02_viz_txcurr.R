@@ -111,9 +111,14 @@ library(sf)
       mutate(tx_mmd.unkwn = tx_curr - sum(tx_mmd.u3, tx_mmd.35, tx_mmd.o6, na.rm = TRUE)) 
     
   #filter out sites where there is more than 100% reporting on MMD
+    # df_mmd <- df_mmd %>% 
+    #   filter(tx_curr > 0,
+    #          tx_mmd.unkwn >= 0)
+  
+  #replace values where MMD > TX_CURR
     df_mmd <- df_mmd %>% 
-      filter(tx_curr > 0,
-             tx_mmd.unkwn >= 0)
+      mutate(across(c(tx_mmd.u3, tx_mmd.35, tx_mmd.o6), ~ ifelse(tx_mmd.unkwn < 0, NA, .))) %>% 
+      mutate(tx_mmd.unkwn = ifelse(tx_mmd.unkwn < 0, tx_curr, tx_mmd.unkwn))
     
   #remove mmd
     df_txcurr <- filter(df_tx, indicator == "TX_CURR")
