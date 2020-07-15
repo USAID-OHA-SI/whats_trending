@@ -12,6 +12,7 @@
 library(googledrive)
 library(tidyverse)
 library(glamr)
+library(Wavelength)
 
   
 # SETUP FOLDERS -----------------------------------------------------------
@@ -34,4 +35,21 @@ library(glamr)
     walk(files, ~ import_drivefile(fldr_id, .x))
 
 
+# PULL HIERARCHY ----------------------------------------------------------
+
+
+  #DATIM username
+    user <- ""
+    
+  #pull country uids
+    ctry_uids <- get_outable(user, mypwd(user)) %>% pull(countryname_uid)
+    
+  #pull hierarchy
+    df_orgs <- map_dfr(ctry_uids, 
+                      ~ pull_hierarchy(.x, user, mypwd(user)))
+    
+  #save
+    hfr_export(df_orgs, "Data", type = "orghierarchy")
+    
+  
   
