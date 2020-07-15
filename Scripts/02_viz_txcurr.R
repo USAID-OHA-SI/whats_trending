@@ -108,7 +108,8 @@ library(sf)
       spread(indicator, hfr_results) %>% 
       rename_all(tolower) %>% 
       rowwise() %>% 
-      mutate(tx_mmd.unkwn = tx_curr - sum(tx_mmd.u3, tx_mmd.35, tx_mmd.o6, na.rm = TRUE)) 
+      mutate(tx_mmd.unkwn = tx_curr - sum(tx_mmd.u3, tx_mmd.35, tx_mmd.o6, na.rm = TRUE)) %>% 
+      ungroup()
     
   #filter out sites where there is more than 100% reporting on MMD
     # df_mmd <- df_mmd %>% 
