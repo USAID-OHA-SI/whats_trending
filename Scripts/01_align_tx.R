@@ -4,7 +4,7 @@
 ## PURPOSE:  align FY20 HFR data
 ## NOTE:     migrated over from pump_up_the_jam
 ## DATE:     2020-05-05
-## UPDATED:  2020-07-14
+## UPDATED:  2020-07-15
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -64,14 +64,43 @@ dataout <- "Dataout"
       summarise_at(vars(mer_targets, mer_results, hfr_results = val), sum, na.rm = TRUE) %>%
       ungroup()
     
-  #aggregate up to hfr period (max)
-    df_tx <- df_tx %>% 
+    
+    # write_csv(df_tx, here(dataout, "draft_data.csv"), na = "")    
+    df_tx <- read_csv(here(dataout, "draft_data.csv"))
+    
+  #aggregate MER data
+    df_tx_mer <- df_tx %>%
+      select(-hfr_results) %>% 
       group_by(operatingunit, countryname, snu1, psnu, orgunit, orgunituid,
                fy, hfr_pd,
                mech_code, mech_name, primepartner,
                indicator) %>% 
-      summarise_at(vars(mer_targets, mer_results, hfr_results), max, na.rm = TRUE) %>% 
-      ungroup()
+      summarise_at(vars(mer_targets, mer_results), max, na.rm = TRUE) %>% 
+      ungroup() %>% 
+      glimpse()
+    
+  #spread hfr variables (prep to then take last obs) and drop any blank rows
+    df_tx_hfr <- df_tx %>%
+      select(-c(mer_targets, mer_results)) %>% 
+      spread(indicator, hfr_results) %>%
+      filter_at(vars(starts_with("TX")), any_vars(. != 0 | is.na(.))) 
+    
+  #filter for only the last available date for each pd x orgunit x mech
+    df_tx_hfr <- df_tx_hfr %>% 
+      group_by(operatingunit, countryname, snu1, psnu, orgunit, orgunituid,
+               fy, hfr_pd,
+               mech_code, mech_name, primepartner) %>% 
+      filter(date == max(date)) %>% 
+      ungroup() 
+    
+  #reshape and remove date (only one obs per pd now)
+    df_tx_hfr <- df_tx_hfr %>% 
+      gather(indicator, hfr_results, starts_with("TX"), na.rm = TRUE) %>% 
+      select(-date)
+    
+  #merge back together & drop temp data fames
+    df_tx <- full_join(df_tx_hfr, df_tx_mer) 
+    rm(df_tx_hfr, df_tx_mer)
   
   #replace //N with NA
     df_tx <- df_tx %>% 
