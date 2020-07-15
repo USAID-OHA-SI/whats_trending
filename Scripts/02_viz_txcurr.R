@@ -102,26 +102,6 @@ library(sf)
       ungroup() 
       # mutate(hfr_pd = (2020 + hfr_pd/100) %>% as.character)
     
-  #extract mmd - max MER values to fill MMD pre spreading
-    df_mmd <- df_tx %>% 
-      group_by(orgunituid, mech_code, fy) %>% 
-      mutate(mer_targets = max(mer_targets, na.rm = TRUE),
-             mer_results = max(mer_results, na.rm = TRUE)) %>% 
-      ungroup() %>% 
-      spread(indicator, hfr_results) %>% 
-      rename_all(tolower)
-    
-  #create an Unknown MMD
-    df_mmd <- df_mmd %>% 
-      rowwise() %>% 
-      mutate(tx_mmd.unkwn = tx_curr - sum(tx_mmd.u3, tx_mmd.35, tx_mmd.o6, na.rm = TRUE)) %>% 
-      ungroup()
-  
-  #replace values where MMD > TX_CURR
-    df_mmd <- df_mmd %>% 
-      mutate(across(c(tx_mmd.u3, tx_mmd.35, tx_mmd.o6), ~ ifelse(tx_mmd.unkwn < 0, NA, .))) %>% 
-      mutate(tx_mmd.unkwn = ifelse(tx_mmd.unkwn < 0, tx_curr, tx_mmd.unkwn))
-    
   #remove mmd
     df_txcurr <- filter(df_tx, indicator == "TX_CURR")
     
@@ -135,6 +115,25 @@ library(sf)
     df_txcurr <- df_txcurr %>% 
       filter(is_datim_site == TRUE)
     
+  #extract mmd - max MER values to fill MMD pre spreading
+    df_mmd <- df_tx %>% 
+      group_by(orgunituid, mech_code, fy) %>% 
+      mutate(mer_targets = max(mer_targets, na.rm = TRUE),
+             mer_results = max(mer_results, na.rm = TRUE)) %>% 
+      ungroup() %>% 
+      spread(indicator, hfr_results) %>% 
+      rename_all(tolower)
+    
+  #create a MMD Unknown indicator
+    df_mmd <- df_mmd %>% 
+      rowwise() %>% 
+      mutate(tx_mmd.unkwn = tx_curr - sum(tx_mmd.u3, tx_mmd.35, tx_mmd.o6, na.rm = TRUE)) %>% 
+      ungroup()
+    
+  #replace values where MMD > TX_CURR
+    df_mmd <- df_mmd %>% 
+      mutate(across(c(tx_mmd.u3, tx_mmd.35, tx_mmd.o6), ~ ifelse(tx_mmd.unkwn < 0, NA, .))) %>% 
+      mutate(tx_mmd.unkwn = ifelse(tx_mmd.unkwn < 0, tx_curr, tx_mmd.unkwn))    
     
   #covid markers
     df_covid_case10 <- df_covid %>% 
