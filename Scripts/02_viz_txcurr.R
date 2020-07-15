@@ -102,10 +102,17 @@ library(sf)
       ungroup() 
       # mutate(hfr_pd = (2020 + hfr_pd/100) %>% as.character)
     
-  #extract mmd
+  #extract mmd - max MER values to fill MMD pre spreading
     df_mmd <- df_tx %>% 
+      group_by(orgunituid, mech_code, fy) %>% 
+      mutate(mer_targets = max(mer_targets, na.rm = TRUE),
+             mer_results = max(mer_results, na.rm = TRUE)) %>% 
+      ungroup() %>% 
       spread(indicator, hfr_results) %>% 
-      rename_all(tolower) %>% 
+      rename_all(tolower)
+    
+  #create an Unknown MMD
+    df_mmd <- df_mmd %>% 
       rowwise() %>% 
       mutate(tx_mmd.unkwn = tx_curr - sum(tx_mmd.u3, tx_mmd.35, tx_mmd.o6, na.rm = TRUE)) %>% 
       ungroup()
@@ -321,30 +328,34 @@ library(sf)
 
 # MMD ---------------------------------------------------------------------
 
+    #aggrgate mmd to OU level
       df_mmd_ctry <- df_mmd %>%
         group_by(operatingunit, hfr_pd) %>% 
-        summarise_at(vars(starts_with("tx")), sum, na.rm = TRUE) %>% 
+        summarise_at(vars(starts_with("mer"), starts_with("tx")), sum, na.rm = TRUE) %>% 
         ungroup() 
       
+    #gather mmd to create shares for +/< 3mo  
+      df_mmd_ctry <- df_mmd_ctry %>% 
+        gather(indicator, value, starts_with("tx_mmd")) %>% 
+        mutate(indicator = ifelse(indicator %in% c("tx_mmd.35", "tx_mmd.o6"), "tx_mmd.o3", indicator)) %>% 
+        group_by(operatingunit, indicator, hfr_pd, tx_curr, mer_targets) %>% 
+        summarise(value = sum(value, na.rm = TRUE)) %>% 
+        group_by(operatingunit, hfr_pd) %>% 
+        mutate(share = value / sum(value)) %>% 
+        ungroup() %>% 
+        mutate(operatingunit = fct_reorder(operatingunit, mer_targets, .desc = TRUE),
+               indicator = factor(indicator, c("tx_mmd.unkwn", "tx_mmd.o3", "tx_mmd.u3")))
+      
+    #add in dates
+      df_mmd_ctry <-  left_join(df_mmd_ctry, df_pds)
+    
+    #get OUs ordering by TX_CURR targets
       ctry_tx_targets <- df_tx %>% 
         filter(hfr_pd == max(hfr_pd)) %>% 
         count(operatingunit, wt = mer_targets, sort = TRUE) %>% 
         pull(operatingunit)
       
-      
-      df_mmd_ctry <- df_mmd_ctry %>% 
-        gather(indicator, value, starts_with("tx_mmd")) %>% 
-        mutate(indicator = ifelse(indicator %in% c("tx_mmd.35", "tx_mmd.o6"), "tx_mmd.o3", indicator)) %>% 
-        group_by(operatingunit, indicator, hfr_pd, tx_curr) %>% 
-        summarise(value = sum(value, na.rm = TRUE)) %>% 
-        group_by(operatingunit, hfr_pd) %>% 
-        mutate(share = value / sum(value)) %>% 
-        ungroup() %>% 
-        mutate(operatingunit = factor(operatingunit, ctry_tx_targets),
-               indicator = factor(indicator, c("tx_mmd.unkwn", "tx_mmd.o3", "tx_mmd.u3")))
-      
-      df_mmd_ctry <-  left_join(df_mmd_ctry, df_pds)
-      
+    #filter covid countries to PEPFAR ones and align factor
       df_covid_case10_ctry <- df_covid_case10 %>% 
         filter(countryname %in% unique(df_mmd_ctry$operatingunit)) %>% 
         mutate(operatingunit = factor(countryname, ctry_tx_targets))
