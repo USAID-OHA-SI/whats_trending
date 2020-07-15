@@ -169,11 +169,6 @@ library(sf)
   #apend non interpolated sites
     df_txcurr <- bind_rows(df_txcurr, df_nonipol_sites)
     
-
-# EXTRAPOLATE -------------------------------------------------------------
-
-  #TBD
-    
     
 # CALCULATE COMPLETENESS --------------------------------------------------
     
