@@ -3,7 +3,7 @@
 ## LICENSE:  MIT
 ## PURPOSE:  review and visualize TX_CURR HFR data
 ## DATE:     2020-05-13
-## UPDATED:  2020-06-06
+## UPDATED:  2020-07-15
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -104,17 +104,11 @@ library(sf)
     
   #extract mmd
     df_mmd <- df_tx %>% 
-      select(-mer_results, -mer_targets) %>% 
       spread(indicator, hfr_results) %>% 
       rename_all(tolower) %>% 
       rowwise() %>% 
       mutate(tx_mmd.unkwn = tx_curr - sum(tx_mmd.u3, tx_mmd.35, tx_mmd.o6, na.rm = TRUE)) %>% 
       ungroup()
-    
-  #filter out sites where there is more than 100% reporting on MMD
-    # df_mmd <- df_mmd %>% 
-    #   filter(tx_curr > 0,
-    #          tx_mmd.unkwn >= 0)
   
   #replace values where MMD > TX_CURR
     df_mmd <- df_mmd %>% 
