@@ -84,6 +84,19 @@ dataout <- "Dataout"
       select(-c(mer_targets, mer_results)) %>% 
       spread(indicator, hfr_results) %>%
       filter_at(vars(starts_with("TX")), any_vars(. != 0 | is.na(.))) 
+  
+  #replace NA with zero for any mmd reported row 
+  # (needed for the fill later so an NA does not take on the last reported share that may exist)
+    df_tx_hfr <- df_tx_hfr %>% 
+      rowwise() %>% 
+      mutate(mmd_reported = sum(TX_MMD.u3, TX_MMD.35, TX_MMD.o6, na.rm = TRUE) > 0) %>% 
+      ungroup() %>% 
+      mutate(across(starts_with("TX_MMD"), ~ ifelse(mmd_reported == TRUE & is.na(.), 0, .))) %>% 
+      select(-mmd_reported)
+    
+  #create shares
+    df_tx_hfr <- df_tx_hfr %>% 
+      mutate(across(starts_with("TX_MMD"), list(share = ~.x / TX_CURR)))
     
   #filter for only the last available date for each pd x orgunit x mech
     df_tx_hfr <- df_tx_hfr %>% 
@@ -92,6 +105,7 @@ dataout <- "Dataout"
                mech_code, mech_name, primepartner) %>% 
       filter(date == max(date)) %>% 
       ungroup() 
+
     
   #reshape and remove date (only one obs per pd now)
     df_tx_hfr <- df_tx_hfr %>% 
