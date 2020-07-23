@@ -365,8 +365,8 @@ library(sf)
                !is.na(operatingunit),
                !is.nan(share)) %>% 
         ggplot(aes(hfr_pd_date_max, share)) +
-        geom_col(data = df_covid_case10_ctry, 
-                 aes(date, 1), color = "gray70") +
+        geom_vline(data = df_covid_case10_ctry, aes(xintercept = date), 
+                   color = "gray70", size = 1.5) +
         geom_path(aes(group = indicator, color = indicator), size = .9) +
         geom_point(aes(group = indicator, color = indicator)) +
         facet_wrap(~ operatingunit) +
