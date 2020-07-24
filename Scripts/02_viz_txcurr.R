@@ -215,35 +215,39 @@ library(sf)
                   size = 2.5, na.rm = TRUE) +
         scale_fill_viridis_c(limits = c(1, 12), label = NULL, direction = -1, na.value = "gray80") +
         scale_color_manual(values = c("dark" = "gray30", "light" = "white"), guide = FALSE) +
+        scale_x_discrete(position = "top") +
         labs(subtitle = "HFR Site Completeness",
              y = NULL, x = NULL, color = "Site Type",
              caption ="Note: Completeness derived by comparing HFR reporting against sites with DATIM results/targets") +
         # theme_minimal() + 
         si_style_nolines() +
-        theme(legend.position = "none")
+        theme(legend.position = "none",
+              axis.text.y = element_text(size = 9),
+              axis.text.x = element_text(size = 8))
       
     #viz mer targets
       viz_targ <- df_comp %>% 
         filter(hfr_pd == max(hfr_pd)) %>% 
         mutate(trgt_lab = case_when(mer_targets > 1000000 ~ paste0(round(mer_targets/1000000, 1), "m"),
-                                    mer_targets > 10000 ~ paste0(round(mer_targets/1000, 0), "k"),
                                     mer_targets == 0 ~ "0",
-                                    TRUE ~ paste0(round(mer_targets/1000, 1), "k"))) %>% 
+                                    TRUE ~ paste0(round(mer_targets/1000, 0), "k"))) %>% 
         ggplot(aes(mer_targets, fct_reorder(operatingunit, mer_targets, sum))) +
         geom_blank(aes(mer_targets * 1.2)) +
         geom_col(fill = heatmap_pal[10]) +
-        geom_text(aes(label = trgt_lab), family = "Source Sans Pro",
+        geom_text(aes(label = trgt_lab), family = "Source Sans Pro", size = 3,
                   color = "gray50", hjust = -.2) +
         labs(subtitle = "MER Targets (USAID)",
              x = NULL, y = NULL,
              caption = paste("Source: MER [FY20Q2i] + HFR", hfr_date)) +
-        scale_x_continuous(expand = c(0.005, 0.005)) +
+        scale_x_continuous(expand = c(0.005, 0.005), position = "top") +
         scale_y_discrete(expand = c(0.005, 0.005)) +
         si_style_nolines() +
-        theme(axis.text.x=element_text(color = "white"))
+        theme(axis.text.x=element_text(size = 8, color = "white"),
+              axis.text.y = element_text(size = 9))
       
     #combine viz
       viz_comp + viz_targ + 
+        # plot_layout(widths = c(2, 1)) +
         plot_annotation(title = "FY20 HFR TX_CURR COMPLETENESS AND MER TARGETS") &
         theme(plot.title = element_text(family = "Source Sans Pro", face = "bold"))
       
@@ -563,13 +567,13 @@ library(sf)
                       colour = grey50k) +
         geom_hline(yintercept = 0) +
         geom_text(aes(y = 1.15, label = comma(has_hfr_reporting, 1)), color = "gray30",
-                  size = 3, family = "Source Sans Pro") +
+                  size = 2, family = "Source Sans Pro") +
         expand_limits(y = 1.3) +
         facet_grid(type_sitecount ~.) +
         # facet_grid(type_sitecount ~., switch = "y") +
         scale_fill_identity() +
         scale_y_continuous(label = percent) +
-        scale_x_date(date_breaks = "4 weeks", date_labels = "%b %d") +
+        scale_x_date(date_breaks = "4 weeks", date_labels = "%m/%d") +
         labs(x = NULL, y = "share of sites reporting",
              title = "Sites Reporting Each Period",
              subtitle = "large sites = contributing 80% of all targets",
@@ -580,9 +584,10 @@ library(sf)
           plot.title = element_text(size = 11, color = "gray30"),
           plot.subtitle = element_text(size = 7),
           plot.caption = element_text(size = 5),
-          axis.text = element_text(size = 7),
+          axis.text = element_text(size = 5),
           axis.title = element_text(size = 7),
-          strip.text = element_text(size = 7, hjust = .50) #, face = "bold")
+          strip.text = element_text(size = 7, hjust = .50),
+          panel.spacing = unit(1, "lines")
         )  
     }
     
