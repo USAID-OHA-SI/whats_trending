@@ -3,7 +3,7 @@
 ## LICENSE:  MIT
 ## PURPOSE:  review and visualize TX_CURR HFR data
 ## DATE:     2020-05-13
-## UPDATED:  2020-07-15
+## UPDATED:  2020-07-25
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -219,12 +219,9 @@ library(sf)
         labs(subtitle = "HFR Site Completeness",
              y = NULL, x = NULL, color = "Site Type",
              caption = "Note: Completeness derived by comparing HFR reporting against sites with DATIM results/targets") +
-        theme_minimal() + 
-        theme(legend.position = "none",
-              legend.justification = c(0, 0),
-              panel.grid = element_blank(),
-              text = element_text(family = "Source Sans Pro"),
-              plot.caption = element_text(color = "gray30"))
+        # theme_minimal() + 
+        si_style_nolines() +
+        theme(legend.position = "none")
       
     #viz mer targets
       viz_targ <- df_comp %>% 
