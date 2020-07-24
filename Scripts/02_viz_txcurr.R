@@ -360,14 +360,14 @@ library(sf)
                                     "Congo (Kinshasa)" = "Democratic Republic of the Congo")) 
         
     #align and aggregate to OU level
-      df_covid_case10 <-  df_tx %>% 
+      df_covid_case10_ctry <-  df_tx %>% 
         distinct(operatingunit, countryname) %>% 
         left_join(df_covid_case10) %>%
         group_by(operatingunit) %>% 
         summarise(date = min(date, na.rm = TRUE))
       
     #filter covid countries to PEPFAR ones and align factor
-      df_covid_case10_ctry <- df_covid_case10 %>% 
+      df_covid_case10_ctry <- df_covid_case10_ctry %>% 
         filter(operatingunit %in% unique(df_mmd_ctry$operatingunit)) %>% 
         mutate(operatingunit = factor(operatingunit, ctry_tx_targets))
       
@@ -800,7 +800,7 @@ library(sf)
           scale_fill_manual(values = bivar_map) +
           si_style_nolines() +
           labs(x = NULL, y = NULL,
-               title = "Identifying Reporting Gaps",
+               title = "Identifying Reporting Gaps in 2020",
                subtitle = "problem areas = dark pink and purple") +
           theme_void() +
           theme(text = element_text(family = "Source Sans Pro"),
@@ -875,7 +875,7 @@ library(sf)
     
     }
     
-    viz_combo("South Sudan")
+    viz_combo("Nigeria")
     
 
   ctrys <- df_txcurr %>% 
