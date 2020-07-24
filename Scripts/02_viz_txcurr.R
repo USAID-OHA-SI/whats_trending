@@ -20,16 +20,15 @@ library(RColorBrewer)
 library(COVIDutilities)
 library(rnaturalearth)
 library(sf)
-# library(magick)
-# library(grid)
-
-
 
 
 # GLOBAL VARIABLES --------------------------------------------------------
 
   datain <- "Data"
   dataout <- "Dataout"
+  
+  #hfr date
+  hfr_date <- "[2020-07-13]"
   
   # paste((1:12), '=', viridis_pal(direction = -1)(12))
   heatmap_pal <- c("1"  = "#FDE725FF", "2"  = "#C2DF23FF", "3"  = "#85D54AFF",
@@ -218,7 +217,7 @@ library(sf)
         scale_color_manual(values = c("dark" = "gray30", "light" = "white"), guide = FALSE) +
         labs(subtitle = "HFR Site Completeness",
              y = NULL, x = NULL, color = "Site Type",
-             caption = "Note: Completeness derived by comparing HFR reporting against sites with DATIM results/targets") +
+             caption ="Note: Completeness derived by comparing HFR reporting against sites with DATIM results/targets") +
         # theme_minimal() + 
         si_style_nolines() +
         theme(legend.position = "none")
@@ -236,7 +235,8 @@ library(sf)
         geom_text(aes(label = trgt_lab), family = "Source Sans Pro",
                   color = "gray50", hjust = -.2) +
         labs(subtitle = "MER Targets (USAID)",
-             x = NULL, y = NULL) +
+             x = NULL, y = NULL,
+             caption = paste("Source: MER [FY20Q2i] + HFR", hfr_date)) +
         scale_x_continuous(expand = c(0.005, 0.005)) +
         scale_y_discrete(expand = c(0.005, 0.005)) +
         si_style_nolines() +
@@ -296,7 +296,8 @@ library(sf)
         geom_text(aes(label = percent(share, 1)),
                   hjust = -.1, family = "Source Sans Pro", color = "gray30") +
         labs(x = NULL, y = NULL,
-             title = paste("SHARE OF SITES BY OU REPORTING IN ALL", pds, "PERIODS")) +
+             title = paste("SHARE OF SITES BY OU REPORTING IN ALL", pds, "PERIODS"),
+             caption = paste("Source: HFR", hfr_date)) +
         scale_x_continuous(labels = percent, expand = c(0.005, 0.005)) +
         scale_y_discrete(expand = c(0.005, 0.005)) +
         si_style_nolines() +
@@ -314,7 +315,8 @@ library(sf)
         geom_text(aes(share_ipol, label = percent(share_ipol, 1)),
                   hjust = -.1, family = "Source Sans Pro", color = "gray30") +
         labs(x = NULL, y = NULL,
-             title = paste("SHARE OF SITES BY OU REPORTING IN ALL", pds, "PERIODS WHEN INTERPOLATING")) +
+             title = paste("SHARE OF SITES BY OU REPORTING IN ALL", pds, "PERIODS WHEN INTERPOLATING"),
+             caption = paste("Source: HFR", hfr_date)) +
         scale_x_continuous(labels = percent, expand = c(0.005, 0.005)) +
         scale_y_discrete(expand = c(0.005, 0.005)) +
         si_style_nolines() +
@@ -351,12 +353,25 @@ library(sf)
         count(operatingunit, wt = mer_targets, sort = TRUE) %>% 
         pull(operatingunit)
       
+      
+    #align names
+      df_covid_case10 <- df_covid_case10 %>% 
+        mutate(countryname = recode(countryname,
+                                    "Congo (Kinshasa)" = "Democratic Republic of the Congo")) 
+        
+    #align and aggregate to OU level
+      df_covid_case10 <-  df_tx %>% 
+        distinct(operatingunit, countryname) %>% 
+        left_join(df_covid_case10) %>%
+        group_by(operatingunit) %>% 
+        summarise(date = min(date, na.rm = TRUE))
+      
     #filter covid countries to PEPFAR ones and align factor
       df_covid_case10_ctry <- df_covid_case10 %>% 
-        filter(countryname %in% unique(df_mmd_ctry$operatingunit)) %>% 
-        mutate(operatingunit = factor(countryname, ctry_tx_targets))
+        filter(operatingunit %in% unique(df_mmd_ctry$operatingunit)) %>% 
+        mutate(operatingunit = factor(operatingunit, ctry_tx_targets))
       
-      
+
       df_mmd_ctry %>% 
         filter(indicator != "tx_mmd.unkwn",
                !is.na(operatingunit),
@@ -375,7 +390,7 @@ library(sf)
         labs(x = NULL, y = NULL,
              title = "SOME SHIFTS TOWARDS INCREASED MMD IN THE FACE OF COVID-19",
              subtitle = "countries ordered by TX_CURR targets",
-             caption = "Source: HFR [2020-07-05]") + 
+             caption = paste("Source: HFR", hfr_date)) + 
         theme(#legend.position = "none",
               legend.title = element_blank(),
               axis.text.x = element_text(size = 9),
@@ -427,7 +442,8 @@ library(sf)
         # scale_fill_manual(values = c(posneg_pal[1], posneg_pal[3])) +
         labs(x = NULL, y = NULL,
              title = "TX_CURR GROWTH",
-             subtitle =  "only sites that report every period (using interpolated data)") +
+             subtitle =  "only sites that report every period (using interpolated data)",
+             caption = paste("Source: HFR", hfr_date)) +
         si_style_ygrid() +
         theme(strip.text = element_text(face = "bold"),
               axis.text.x = element_text(size = 8),
@@ -435,7 +451,7 @@ library(sf)
               legend.position = "none")
       
       
-      ggsave("HFR_TX_Growth_SitesAllPds.png", path = "Images", width = 10, height = 5.625, dpi = 300)
+      # ggsave("HFR_TX_Growth_SitesAllPds.png", path = "Images", width = 10, height = 5.625, dpi = 300)
   
 
 # OU TRENDS ---------------------------------------------------------------
@@ -834,18 +850,11 @@ library(sf)
       p1 <- viz_trends(ctry_sel)
       p2 <- viz_rpt_rates(ctry_sel)    
       p3 <- viz_rpt_map(ctry_sel)
-      
-      # p3
-      # grid.raster(lgnd, x = .15, y = .15, width = .2, height = .2)
-      # 
       p4 <- viz_growth(ctry_sel)
       
       if(is.null(p4))
         p4 <- plot_spacer()
       
-      # (p1 + p2 & theme(strip.placement = NULL))/ (p3 + p4 + plot_spacer())
-  
-      # p3 + (p1 / (p2  + p4 & theme(strip.placement = NULL))) +
       combo <- p3 + (p1 / (p2 + p4  & theme(strip.placement = NULL))) +
         plot_annotation(
           title = paste(toupper(ctry_sel), "| ASSESSING COVID’S IMPACT THROUGH HFR"),
@@ -881,5 +890,5 @@ library(sf)
   walk(ctrys[27:39], viz_combo)
   walk(ctrys, viz_combo)
   
-  viz_combo(ctrys[13])
+  viz_combo(ctrys[2])
   
