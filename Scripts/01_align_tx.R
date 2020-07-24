@@ -84,7 +84,36 @@ dataout <- "Dataout"
       select(-c(mer_targets, mer_results)) %>% 
       spread(indicator, hfr_results) %>%
       filter_at(vars(starts_with("TX")), any_vars(!is.na(.) & .!= 0)) 
+  
+  #replace NA with zero for any mmd reported row 
+  # (needed for the fill later so an NA does not take on the last reported share that may exist)
+    df_tx_hfr <- df_tx_hfr %>% 
+      rowwise() %>% 
+      mutate(mmd_reported = sum(TX_MMD.u3, TX_MMD.35, TX_MMD.o6, na.rm = TRUE) > 0) %>% 
+      ungroup() %>% 
+      mutate(across(starts_with("TX_MMD"), ~ ifelse(mmd_reported == TRUE & is.na(.), 0, .))) 
     
+  #create MMD shares (to fill down where TX_CURR reported but no MMD from prior weeks in period )
+    df_tx_hfr <- df_tx_hfr %>% 
+      mutate(across(starts_with("TX_MMD"), list(share = ~.x / TX_CURR)))
+             # across(starts_with("TX_MMD"), ~ ifelse(is.na(.) | is.infinite(.) | is.nan(.), NA, .)))
+    
+  #fill shares (fill shares for MMD to calc where missing)
+    df_tx_hfr <- df_tx_hfr %>% 
+      arrange(operatingunit, orgunituid, mech_code, date) %>% 
+      group_by(operatingunit, orgunituid, mech_code, hfr_pd) %>% 
+      fill(ends_with("share")) %>% 
+      ungroup() %>% 
+      mutate(across(ends_with("share"), ~ ifelse(TX_CURR %in% c(0, NA), NA, .))) 
+    
+  #create mmd values where TX_CURR reported and MMD is not
+    df_tx_hfr <- df_tx_hfr %>% 
+      mutate(TX_MMD.u3 = ifelse(TX_CURR > 0 & mmd_reported == FALSE, round(TX_MMD.u3_share * TX_CURR), TX_MMD.u3),
+             TX_MMD.35 = ifelse(TX_CURR > 0 & mmd_reported == FALSE, round(TX_MMD.35_share * TX_CURR), TX_MMD.35),
+             TX_MMD.o6 = ifelse(TX_CURR > 0 & mmd_reported == FALSE, round(TX_MMD.o6_share * TX_CURR), TX_MMD.o6),
+      ) %>% 
+      select(-mmd_reported, -ends_with("share"))
+
   #filter for only the last available date for each pd x orgunit x mech
     df_tx_hfr <- df_tx_hfr %>% 
       group_by(operatingunit, countryname, snu1, psnu, orgunit, orgunituid,
