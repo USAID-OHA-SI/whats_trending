@@ -4,7 +4,7 @@
 ## PURPOSE:  align FY20 HFR data
 ## NOTE:     migrated over from pump_up_the_jam
 ## DATE:     2020-05-05
-## UPDATED:  2020-07-15
+## UPDATED:  2020-07-23
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -83,7 +83,7 @@ dataout <- "Dataout"
     df_tx_hfr <- df_tx %>%
       select(-c(mer_targets, mer_results)) %>% 
       spread(indicator, hfr_results) %>%
-      filter_at(vars(starts_with("TX")), any_vars(. != 0 | is.na(.))) 
+      filter_at(vars(starts_with("TX")), any_vars(!is.na(.) & .!= 0)) 
     
   #filter for only the last available date for each pd x orgunit x mech
     df_tx_hfr <- df_tx_hfr %>% 
