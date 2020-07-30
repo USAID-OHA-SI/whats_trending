@@ -4,7 +4,7 @@
 ## PURPOSE:  align FY20 HFR data
 ## NOTE:     migrated over from pump_up_the_jam
 ## DATE:     2020-05-05
-## UPDATED:  2020-07-23
+## UPDATED:  2020-07-30
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -28,8 +28,8 @@ dataout <- "Dataout"
         hfr_read() %>% 
         filter(indicator %in% c("TX_CURR", "TX_MMD"))
       
-      # if(str_detect(file, "456"))
-      #   df <- filter(df, hfr_pd != 6)
+      if(str_detect(file, "8910"))
+        df <- filter(df, hfr_pd == 10)
       
       return(df)
       
@@ -63,10 +63,6 @@ dataout <- "Dataout"
                indicator) %>% 
       summarise_at(vars(mer_targets, mer_results, hfr_results = val), sum, na.rm = TRUE) %>%
       ungroup()
-    
-    
-    # write_csv(df_tx, here(dataout, "draft_data.csv"), na = "")    
-    df_tx <- read_csv(here(dataout, "draft_data.csv"))
     
   #aggregate MER data
     df_tx_mer <- df_tx %>%
