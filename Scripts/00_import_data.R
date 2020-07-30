@@ -26,7 +26,7 @@ library(Wavelength)
     drive_auth()
   
   #drive location
-    fldr_id <- "1oEFvmfFnTc9eAlSzxhbBG2C7mYCcs1YJ"
+    fldr_id <- "1CLxz5MUmEsmLYb9-ZjIQ7IiAlRMwU1LK"
   
   #files
     files <- drive_ls(as_id(fldr_id), pattern = "View") %>% pull(name)
