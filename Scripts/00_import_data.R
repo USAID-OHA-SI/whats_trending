@@ -52,10 +52,12 @@ library(Wavelength)
     user <- ""
     
   #pull country uids
-    ctry_uids <- get_outable(user, mypwd(user)) %>% pull(countryname_uid)
+    ouuids <- identify_ouuids(user, mypwd(user)) %>%
+      filter(is.na(regional)) %>%
+      pull(id)
     
   #pull hierarchy
-    df_orgs <- map_dfr(ctry_uids, 
+    df_orgs <- map_dfr(ouuids, 
                       ~ pull_hierarchy(.x, user, mypwd(user)))
     
   #save
