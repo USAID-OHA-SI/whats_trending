@@ -3,7 +3,7 @@
 ## LICENSE:  MIT
 ## PURPOSE:  review and visualize TX_CURR HFR data
 ## DATE:     2020-05-13
-## UPDATED:  2020-07-25
+## UPDATED:  2020-09-11
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -28,7 +28,7 @@ library(sf)
   dataout <- "Dataout"
   
   #hfr date
-  hfr_date <- "[2020-07-13]"
+  hfr_date <- "[2020-09-11]"
   
   # paste((1:12), '=', viridis_pal(direction = -1)(12))
   heatmap_pal <- c("1"  = "#FDE725FF", "2"  = "#C2DF23FF", "3"  = "#85D54AFF",
@@ -455,7 +455,7 @@ library(sf)
               legend.position = "none")
       
       
-      # ggsave("HFR_TX_Growth_SitesAllPds.png", path = "Images", width = 10, height = 5.625, dpi = 300)
+      ggsave("HFR_TX_Growth_SitesAllPds.png", path = "Images", width = 10, height = 5.625, dpi = 300)
   
 
 # OU TRENDS ---------------------------------------------------------------
@@ -880,7 +880,7 @@ library(sf)
     
     }
     
-    viz_combo("Nigeria")
+    viz_combo("Tanzania")
     
 
   ctrys <- df_txcurr %>% 
@@ -892,7 +892,7 @@ library(sf)
     # print(n = Inf)
     pull(countryname)
   
-  walk(ctrys[27:39], viz_combo)
+  # walk(ctrys[27:39], viz_combo)
   walk(ctrys, viz_combo)
   
   viz_combo(ctrys[2])
