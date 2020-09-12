@@ -3,7 +3,7 @@
 ## LICENSE:  MIT
 ## PURPOSE:  import data from GDrive
 ## DATE:     2020-06-05
-## UPDATED:  2020-07-14
+## UPDATED:  2020-09-11
 
 
 
@@ -26,10 +26,20 @@ library(Wavelength)
     drive_auth()
   
   #drive location
+  fldr_id <- "1pYb12gKBtwcRPaOTXpYXL548H_PrvUob"
+  
+  #files
+  files <- drive_ls(as_id(fldr_id), pattern = "View") %>% pull(name)
+  
+  #download
+  walk(files, ~ import_drivefile(fldr_id, .x))
+
+
+  #drive location
     fldr_id <- "1CLxz5MUmEsmLYb9-ZjIQ7IiAlRMwU1LK"
   
   #files
-    files <- drive_ls(as_id(fldr_id), pattern = "View") %>% pull(name)
+    files <- drive_ls(as_id(fldr_id), pattern = "View.*(123|456)") %>% pull(name)
   
   #download
     walk(files, ~ import_drivefile(fldr_id, .x))
