@@ -4,7 +4,7 @@
 ## PURPOSE:  align FY20 HFR data
 ## NOTE:     migrated over from pump_up_the_jam
 ## DATE:     2020-05-05
-## UPDATED:  2020-07-30
+## UPDATED:  2020-09-11
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -28,8 +28,8 @@ dataout <- "Dataout"
         hfr_read() %>% 
         filter(indicator %in% c("TX_CURR", "TX_MMD"))
       
-      if(str_detect(file, "8910"))
-        df <- filter(df, hfr_pd == 10)
+      if(str_detect(file, "456"))
+        df <- filter(df, hfr_pd != 6)
       
       return(df)
       
