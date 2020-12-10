@@ -23,7 +23,7 @@ library(Wavelength)
 # DOWNLOAD DATA -----------------------------------------------------------
   
   #OAuth
-    drive_auth()
+    load_secrets()
   
   #drive location
   fldr_id <- "1pYb12gKBtwcRPaOTXpYXL548H_PrvUob"
@@ -48,17 +48,14 @@ library(Wavelength)
 # PULL HIERARCHY ----------------------------------------------------------
 
 
-  #DATIM username
-    user <- ""
-    
   #pull country uids
-    ouuids <- identify_ouuids(user, mypwd(user)) %>%
+    ouuids <- identify_ouuids(datim_user(), datim_pwd()) %>%
       filter(is.na(regional)) %>%
       pull(id)
     
   #pull hierarchy
     df_orgs <- map_dfr(ouuids, 
-                      ~ pull_hierarchy(.x, user, mypwd(user)))
+                      ~ pull_hierarchy(.x, datim_user(), datim_pwd()))
     
   #save
     hfr_export(df_orgs, "Data", type = "orghierarchy")

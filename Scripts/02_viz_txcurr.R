@@ -3,7 +3,7 @@
 ## LICENSE:  MIT
 ## PURPOSE:  review and visualize TX_CURR HFR data
 ## DATE:     2020-05-13
-## UPDATED:  2020-09-11
+## UPDATED:  2020-12-10
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -28,7 +28,7 @@ library(sf)
   dataout <- "Dataout"
   
   #hfr date
-  hfr_date <- "[2020-09-11]"
+  hfr_date <- "[2020-10-01]"
   
   # paste((1:12), '=', viridis_pal(direction = -1)(12))
   heatmap_pal <- c("1"  = "#FDE725FF", "2"  = "#C2DF23FF", "3"  = "#85D54AFF",
@@ -66,7 +66,7 @@ library(sf)
 # IMPORT ------------------------------------------------------------------
 
   #data created in 01_align_tx
-    df_tx <- vroom(here(dataout, "HFR_FY20_TXCURR.csv"))
+    df_tx <- vroom(here(dataout, "HFR_FY20-21_TXCURR.csv"))
 
   #org hierarchy
     df_orgheirarchy <- list.files(datain, "org", full.names = TRUE) %>% 

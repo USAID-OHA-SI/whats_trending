@@ -4,7 +4,7 @@
 ## PURPOSE:  align FY20 HFR data
 ## NOTE:     migrated over from pump_up_the_jam
 ## DATE:     2020-05-05
-## UPDATED:  2020-10-14
+## UPDATED:  2020-12-10
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -36,17 +36,12 @@ dataout <- "Dataout"
     }
   
   #data created in 01_align_tx
-    df_tx <- list.files("Data", "Viewforperiods|Tableau", full.names = TRUE) %>% 
-      map_dfr(import_sqlview)
+    df_tx <- import_sqlview("../Wavelength/out/joint/HFR_Tableau_SQLview.csv")
 
     
 
 # CLEAN -------------------------------------------------------------------
     
-  #remove SQL export row break
-    df_tx <- df_tx %>% 
-      mutate(primepartner = str_remove(primepartner, "\r$"))
-  
   #adjust MMD disagg to be an full indicator
     df_tx <- df_tx %>% 
       mutate(indicator = case_when(indicator == "TX_MMD" & str_detect(otherdisaggregate, "3( |m)") ~ "TX_MMD.u3",
@@ -72,8 +67,7 @@ dataout <- "Dataout"
                mech_code, mech_name, primepartner,
                indicator) %>% 
       summarise_at(vars(mer_targets, mer_results), max, na.rm = TRUE) %>% 
-      ungroup() %>% 
-      glimpse()
+      ungroup() 
     
   #spread hfr variables (prep to then take last obs) and drop any blank rows
     df_tx_hfr <- df_tx %>%
@@ -234,4 +228,4 @@ dataout <- "Dataout"
 
 # EXPORT DATA -------------------------------------------------------------
 
-  write_csv(df_tx, here(dataout, "HFR_FY20_TXCURR.csv"), na = "")    
+  write_csv(df_tx, here(dataout, "HFR_FY20-21_TXCURR.csv"), na = "")    
