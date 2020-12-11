@@ -63,7 +63,7 @@ dataout <- "Dataout"
     df_tx_mer <- df_tx %>%
       select(-hfr_results) %>% 
       group_by(operatingunit, countryname, snu1, psnu, orgunit, orgunituid,
-               fy, hfr_pd,
+               fy, hfr_pd, date,
                mech_code, mech_name, primepartner,
                indicator) %>% 
       summarise_at(vars(mer_targets, mer_results), max, na.rm = TRUE) %>% 
@@ -118,7 +118,7 @@ dataout <- "Dataout"
   #filter for only the last available date for each pd x orgunit x mech
     df_tx_hfr <- df_tx_hfr %>% 
       group_by(operatingunit, countryname, snu1, psnu, orgunit, orgunituid,
-               fy, hfr_pd,
+               fy, hfr_pd, date,
                mech_code, mech_name, primepartner) %>% 
       filter(date == max(date)) %>% 
       ungroup() 
