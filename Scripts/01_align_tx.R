@@ -55,7 +55,7 @@ dataout <- "Dataout"
       group_by(operatingunit, countryname, snu1, psnu, orgunit, orgunituid,
                fy, hfr_pd, date,
                mech_code, mech_name, primepartner,
-               indicator) %>% 
+               indicator, expect_reporting) %>% 
       summarise_at(vars(mer_targets, mer_results, hfr_results = val), sum, na.rm = TRUE) %>%
       ungroup()
     
@@ -65,7 +65,7 @@ dataout <- "Dataout"
       group_by(operatingunit, countryname, snu1, psnu, orgunit, orgunituid,
                fy, hfr_pd, date,
                mech_code, mech_name, primepartner,
-               indicator) %>% 
+               indicator, expect_reporting) %>% 
       summarise_at(vars(mer_targets, mer_results), max, na.rm = TRUE) %>% 
       ungroup() 
     
@@ -134,8 +134,8 @@ dataout <- "Dataout"
   
   #replace //N with NA
     df_tx <- df_tx %>% 
-      mutate_all(~ na_if(., "\\N")) %>% 
-      mutate_all(~ na_if(., "NULL"))
+      mutate(across(where(is.character), na_if, "\\N")) %>% 
+      mutate(across(where(is.character), na_if, "NULL"))
     
   #filter cols with no mer or hfr values 
     df_tx <- df_tx %>% 
