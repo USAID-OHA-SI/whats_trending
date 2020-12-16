@@ -4,7 +4,7 @@
 ## PURPOSE:  align FY20 HFR data
 ## NOTE:     migrated over from pump_up_the_jam
 ## DATE:     2020-05-05
-## UPDATED:  2020-12-10
+## UPDATED:  2020-12-11
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -72,8 +72,8 @@ dataout <- "Dataout"
   #spread hfr variables (prep to then take last obs) and drop any blank rows
     df_tx_hfr <- df_tx %>%
       select(-c(mer_targets, mer_results)) %>% 
-      spread(indicator, hfr_results) %>%
-      filter_at(vars(starts_with("TX")), any_vars(!is.na(.) & .!= 0)) 
+      spread(indicator, hfr_results) #%>%
+      # filter_at(vars(starts_with("TX")), any_vars(!is.na(.) & .!= 0)) 
   
   #replace NA with zero for any mmd reported row 
   # (needed for the fill later so an NA does not take on the last reported share that may exist)
@@ -125,8 +125,8 @@ dataout <- "Dataout"
     
   #reshape and remove date (only one obs per pd now)
     df_tx_hfr <- df_tx_hfr %>% 
-      gather(indicator, hfr_results, starts_with("TX"), na.rm = TRUE) %>% 
-      select(-date)
+      gather(indicator, hfr_results, starts_with("TX")) 
+      # gather(indicator, hfr_results, starts_with("TX"), na.rm = TRUE) 
     
   #merge back together & drop temp data fames
     df_tx <- full_join(df_tx_hfr, df_tx_mer) 
@@ -138,8 +138,8 @@ dataout <- "Dataout"
       mutate(across(where(is.character), na_if, "NULL"))
     
   #filter cols with no mer or hfr values 
-    df_tx <- df_tx %>% 
-      filter_at(vars(starts_with("mer"), "hfr_results"), any_vars(!is.na(.) & .!= 0))
+    # df_tx <- df_tx %>% 
+    #   filter_at(vars(starts_with("mer"), "hfr_results"), any_vars(!is.na(.) & .!= 0))
     
 
 # FLAG IMPORTANT SITES ----------------------------------------------------

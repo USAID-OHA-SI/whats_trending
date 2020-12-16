@@ -93,14 +93,6 @@ library(sf)
     df_tx <- df_tx %>% 
       mutate(mech_code = as.character(mech_code))
   
-  #align dates with hfr_pds
-    df_pds <- hfr_identify_pds(2020) %>% 
-      group_by(hfr_pd) %>% 
-      summarise(hfr_pd_date_min = min(date),
-                hfr_pd_date_max = max(date)) %>% 
-      ungroup() 
-      # mutate(hfr_pd = (2020 + hfr_pd/100) %>% as.character)
-    
   #remove mmd
     df_txcurr <- filter(df_tx, indicator == "TX_CURR")
     
@@ -108,11 +100,15 @@ library(sf)
     df_txcurr <- df_txcurr %>% 
       mutate_at(vars(mer_results, mer_targets), ~ ifelse(is.na(.), 0, .)) %>% 
       mutate(has_hfr_reporting = hfr_results > 0 ,
-             is_datim_site = mer_results > 0 | mer_targets > 0)
+             is_datim_site = expect_reporting == TRUE)
+             # is_datim_site = mer_results > 0 | mer_targets > 0)
     
   #keep only DATIM sites
     df_txcurr <- df_txcurr %>% 
-      filter(is_datim_site == TRUE)
+      mutate(type = case_when(is.na(is_datim_site) ~ "FY21 PSNU MER targets",
+                              is_datim_site == TRUE ~ "HFR expected",
+                              is_datim_site == FALSE ~ "HFR, no MER")) %>%
+      filter(type != "HFR, no MER")
     
   #extract mmd - max MER values to fill MMD pre spreading
     df_mmd <- df_tx %>% 
@@ -167,7 +163,7 @@ library(sf)
     df_txcurr <- df_txcurr %>%
       filter(pds_reported >= 2) %>% 
       group_by(mech_code, orgunituid) %>% 
-      mutate(hfr_results_ipol = approx(hfr_pd, hfr_results, hfr_pd)$y %>% round) %>% 
+      mutate(hfr_results_ipol = approx(date, hfr_results, date)$y %>% round) %>% 
       ungroup() %>% 
       mutate(is_ipol = !is.na(hfr_results_ipol) & is.na(hfr_results))
     
@@ -179,7 +175,7 @@ library(sf)
     
     #aggregate to country
       df_comp <- df_txcurr %>% 
-        group_by(hfr_pd, indicator, operatingunit) %>% 
+        group_by(hfr_pd, date, indicator, operatingunit) %>% 
         summarise_at(vars(has_hfr_reporting, is_datim_site, mer_targets), sum, na.rm = TRUE) %>% 
         ungroup()
     
@@ -193,7 +189,11 @@ library(sf)
 
     #site count
       df_comp <- df_comp %>% 
-        mutate(ou_sitecount = paste0(operatingunit, " (", comma(is_datim_site, 1), ")"))
+        mutate(fy21_count = ifelse(date == "2020-10-01", is_datim_site, 0)) %>% 
+        group_by(operatingunit) %>% 
+        mutate(fy21_count = max(fy21_count)) %>% 
+        ungroup() %>% 
+        mutate(ou_sitecount = paste0(operatingunit, " (", comma(fy21_count, 1), ")"))
       
     #filter
       df_comp <- df_comp %>% 
@@ -201,10 +201,9 @@ library(sf)
     
     #clean up period
       df_comp <- df_comp %>% 
-        left_join(df_pds) %>% 
-        mutate(date_lab = paste0(format.Date(hfr_pd_date_max, "%b %d"), "\n(",
+        mutate(date_lab = paste0(format.Date(date, "%b %d"), "\n(",
                                  str_pad(hfr_pd, 2, pad = "0"), ")"),
-               date_lab = fct_reorder(date_lab, hfr_pd_date_max))
+               date_lab = fct_reorder(date_lab, date))
       
     #viz completeness
       viz_comp <- df_comp %>% 
@@ -218,7 +217,7 @@ library(sf)
         scale_x_discrete(position = "top") +
         labs(subtitle = "HFR Site Completeness",
              y = NULL, x = NULL, color = "Site Type",
-             caption ="Note: Completeness derived by comparing HFR reporting against sites with DATIM results/targets") +
+             caption ="Note: Completeness derived by comparing HFR reporting against sites with DATIM results/targets or where teams noted expected results for FY21") +
         # theme_minimal() + 
         si_style_nolines() +
         theme(legend.position = "none",
@@ -238,7 +237,7 @@ library(sf)
                   color = "gray50", hjust = -.2) +
         labs(subtitle = "MER Targets (USAID)",
              x = NULL, y = NULL,
-             caption = paste("Source: MER [FY20Q2i] + HFR", hfr_date)) +
+             caption = paste("Source: FY21 MER Targets [FY20Q4i] + HFR", hfr_date)) +
         scale_x_continuous(expand = c(0.005, 0.005), position = "top") +
         scale_y_discrete(expand = c(0.005, 0.005)) +
         si_style_nolines() +
@@ -248,7 +247,7 @@ library(sf)
     #combine viz
       viz_comp + viz_targ + 
         # plot_layout(widths = c(2, 1)) +
-        plot_annotation(title = "FY20 HFR TX_CURR COMPLETENESS AND MER TARGETS") &
+        plot_annotation(title = "FY20-1 HFR TX_CURR COMPLETENESS AND MER TARGETS") &
         theme(plot.title = element_text(family = "Source Sans Pro", face = "bold"))
       
       ggsave("HFR_TX_Comp.png", path = "Images", width = 10, height = 5.625, dpi = 300)
@@ -332,7 +331,7 @@ library(sf)
 
     #aggrgate mmd to OU level
       df_mmd_ctry <- df_mmd %>%
-        group_by(operatingunit, hfr_pd) %>% 
+        group_by(operatingunit, hfr_pd, date) %>% 
         summarise_at(vars(starts_with("mer"), starts_with("tx")), sum, na.rm = TRUE) %>% 
         ungroup() 
       
@@ -340,16 +339,13 @@ library(sf)
       df_mmd_ctry <- df_mmd_ctry %>% 
         gather(indicator, value, starts_with("tx_mmd")) %>% 
         mutate(indicator = ifelse(indicator %in% c("tx_mmd.35", "tx_mmd.o6"), "tx_mmd.o3", indicator)) %>% 
-        group_by(operatingunit, indicator, hfr_pd, tx_curr, mer_targets) %>% 
+        group_by(operatingunit, indicator, hfr_pd, date, tx_curr, mer_targets) %>% 
         summarise(value = sum(value, na.rm = TRUE)) %>% 
-        group_by(operatingunit, hfr_pd) %>% 
+        group_by(operatingunit, hfr_pd, date) %>% 
         mutate(share = value / sum(value)) %>% 
         ungroup() %>% 
         mutate(operatingunit = fct_reorder(operatingunit, mer_targets, .desc = TRUE),
                indicator = factor(indicator, c("tx_mmd.unkwn", "tx_mmd.o3", "tx_mmd.u3")))
-      
-    #add in dates
-      df_mmd_ctry <-  left_join(df_mmd_ctry, df_pds)
     
     #get OUs ordering by TX_CURR targets
       ctry_tx_targets <- df_tx %>% 
@@ -380,7 +376,8 @@ library(sf)
         filter(indicator != "tx_mmd.unkwn",
                !is.na(operatingunit),
                !is.nan(share)) %>% 
-        ggplot(aes(hfr_pd_date_max, share)) +
+        arrange(operatingunit, indicator, date) %>% 
+        ggplot(aes(date, share)) +
         geom_vline(data = df_covid_case10_ctry, aes(xintercept = date), 
                    color = "gray70", size = 1.5) +
         geom_path(aes(group = indicator, color = indicator), size = .9) +
@@ -415,7 +412,7 @@ library(sf)
       
     #aggregate to OU level and create growth metric
       df_txcurr_comp <- df_txcurr_comp %>% 
-        group_by(operatingunit, hfr_pd) %>% 
+        group_by(operatingunit, hfr_pd, date) %>% 
         summarise(hfr_results_ipol  = sum(hfr_results_ipol, na.rm = TRUE), 
                   mer_targets = sum(mer_targets, na.rm = TRUE), 
                   n = n()
@@ -424,19 +421,18 @@ library(sf)
         group_by(operatingunit) %>% 
         mutate(growth = (hfr_results_ipol - lag(hfr_results_ipol, order_by = hfr_pd)) / lag(hfr_results_ipol, order_by = hfr_pd)) %>% 
         ungroup() %>% 
-        filter(hfr_pd != 1) %>% 
+        filter(date != "2019-09-30") %>% 
         mutate(ou_count = paste0(operatingunit, " (", comma(n, 1), ")"))
       
     #clean up period
       df_txcurr_comp <- df_txcurr_comp %>% 
-        left_join(df_pds, by = "hfr_pd") %>% 
-        mutate(date_lab = paste0(format.Date(hfr_pd_date_max, "%b %d"), "\n(",
+        mutate(date_lab = paste0(format.Date(date, "%b %d"), "\n(",
                                  str_pad(hfr_pd, 2, pad = "0"), ")"),
-               date_lab = fct_reorder(date_lab, hfr_pd_date_max))
+               date_lab = fct_reorder(date_lab, date))
     
     #viz
       df_txcurr_comp %>% 
-        ggplot(aes(hfr_pd_date_max, growth, group = ou_count)) +
+        ggplot(aes(date, growth, group = ou_count)) +
         geom_col(aes(fill = growth > 0)) +
         geom_hline(yintercept = 0, color = "gray40") +
         facet_wrap(~ fct_reorder(ou_count, mer_targets, sum, .desc = TRUE), scales = "free_y") +
@@ -462,7 +458,7 @@ library(sf)
 
     #aggregate to ou level
       df_trends_ctry <-  df_txcurr %>% 
-        group_by(countryname, indicator, hfr_pd) %>% 
+        group_by(countryname, indicator, hfr_pd, date) %>% 
         summarise_at(vars(mer_targets, mer_results, hfr_results, hfr_results_ipol, has_hfr_reporting, is_datim_site), sum, na.rm = TRUE) %>% 
         ungroup() %>%
         mutate_at(vars(hfr_results, hfr_results_ipol, mer_targets, mer_results), ~ na_if(., 0)) %>% 
@@ -477,9 +473,8 @@ library(sf)
                                              !is.na(completeness) ~ 12) #%>% as.character
         )
     #clean up pd
-      df_trends_ctry <- df_trends_ctry %>% 
-        mutate(hfr_pd = as.integer(hfr_pd)) %>% 
-        left_join(df_pds, by = "hfr_pd")
+      # df_trends_ctry <- df_trends_ctry %>% 
+      #   mutate(hfr_pd = as.integer(hfr_pd)) 
       
     #setup range
       df_trends_ctry <- df_trends_ctry %>% 
@@ -496,7 +491,7 @@ library(sf)
       
       v <- df_trends_ctry %>% 
         filter(countryname == ctry_sel) %>% 
-        ggplot(aes(hfr_pd_date_max, hfr_results)) +
+        ggplot(aes(date, hfr_results)) +
         geom_blank(aes(y = max_range), na.rm = TRUE) +
         geom_vline(xintercept = pandemic_date, color = "gray80", size = 1.5, na.rm = TRUE) +
         geom_vline(xintercept = ctry_case10, color = "gray70", size = 1.5, na.rm = TRUE) +
@@ -539,29 +534,36 @@ library(sf)
     
     df_rpt_sites <- df_txcurr %>% 
       mutate(site_type = ifelse(impflag_targets == 1, "Large", "Small")) %>% 
-      group_by(countryname, hfr_pd, site_type) %>% 
+      group_by(countryname, hfr_pd, date, site_type) %>% 
       summarise_at(vars(mer_targets, has_hfr_reporting, is_datim_site), sum, na.rm = TRUE) %>% 
-      ungroup() %>% 
+      ungroup() 
+    
+    df_rpt_sites <- df_rpt_sites %>% 
+      mutate(is_datim_site_fy21 = ifelse(date == "2020-10-01", is_datim_site, 0)) %>% 
+      group_by(countryname, site_type) %>% 
+      mutate(is_datim_site_fy21 = max(is_datim_site_fy21)) %>% 
+      ungroup()
+    
+    df_rpt_sites <- df_rpt_sites %>% 
       mutate(no_reporting = has_hfr_reporting- is_datim_site,
              share_reporting = has_hfr_reporting/is_datim_site,
              share_noreporting = share_reporting-1,
-             type_sitecount = paste0(site_type, " (", comma(is_datim_site, 1), ")"),
-             ou_sitecount = paste0(countryname, " (", comma(is_datim_site, 1), ")")) %>% 
-      left_join(df_pds) %>% 
-      mutate(date_lab = paste0(format.Date(hfr_pd_date_max, "%b %d"), "\n(",
+             type_sitecount = paste0(site_type, " (", comma(is_datim_site_fy21, 1), ")"),
+             ou_sitecount = paste0(countryname, " (", comma(is_datim_site_fy21, 1), ")")) %>% 
+      mutate(date_lab = paste0(format.Date(date, "%b %d"), "\n(",
                                str_pad(hfr_pd, 2, pad = "0"), ")"),
-             date_lab = fct_reorder(date_lab, hfr_pd_date_max))
+             date_lab = fct_reorder(date_lab, date))
     
     
     viz_rpt_rates <- function(ctry_sel) {
       df_rpt_sites %>% 
         filter(countryname == ctry_sel) %>% 
-        ggplot(aes(hfr_pd_date_max, share_reporting)) +
+        ggplot(aes(date, share_reporting)) +
         # geom_vline(xintercept = pandemic_date, color = "gray80", size = 2, na.rm = TRUE) +
         # geom_vline(xintercept = df_covid_case10 %>% filter(countryname == ctry_sel) %>% pull(), 
         #            color = "gray70", size = 2, na.rm = TRUE) +
         geom_col(aes(y = 1), fill = grey10k, alpha = 0.75) +
-        geom_col(aes(fill = ifelse(hfr_pd_date_max > pandemic_date, "#b1c7b3", "#d8e3d8"))) +
+        geom_col(aes(fill = ifelse(date > pandemic_date, "#b1c7b3", "#d8e3d8"))) +
         geom_errorbar(aes(ymin = share_reporting, ymax = share_reporting), size=0.5, 
                       # width = 0.8,
                       colour = grey50k) +
@@ -595,30 +597,28 @@ library(sf)
 
 # GROWTH CHANGE -----------------------------------------------------------
 
-    pds <- df_txcurr %>% 
-        distinct(hfr_pd) %>% 
-        filter(hfr_pd > 3) %>% 
-        pull()
+    pds <- df_txcurr %>%
+        distinct(date) %>%
+        arrange(date) %>% 
+        top_n(7) %>% 
+        pull() 
       
     df_growth <- df_txcurr %>% 
-        filter(hfr_pd %in% pds,
+        filter(date %in% pds,
                hfr_results_ipol > 0) %>% 
         group_by(orgunituid, mech_code) %>% 
         filter(n() == length(pds)) %>% 
       ungroup()
         
     df_growth_ou <- df_growth %>% 
-      group_by(countryname, hfr_pd) %>% 
+      group_by(countryname, hfr_pd, date) %>% 
       summarize_at(vars(hfr_results_ipol, mer_targets, is_datim_site),sum, na.rm = TRUE) %>% 
       ungroup() %>% 
       group_by(countryname) %>% 
-      mutate(delta = (hfr_results_ipol/lag(hfr_results_ipol, order_by = hfr_pd)) -1) %>% 
+      mutate(delta = (hfr_results_ipol/lag(hfr_results_ipol, order_by = date)) -1) %>% 
       ungroup() %>% 
       mutate(ou_sitecount = paste0(countryname, " (", comma(is_datim_site, 1), ")")) %>% 
-      filter(hfr_pd != 4)
-    
-    df_growth_ou <- df_growth_ou %>% 
-      left_join(df_pds)
+      filter(date != min(date))
     
     viz_growth <- function(ctry_sel){
       
@@ -628,17 +628,17 @@ library(sf)
       if(nrow(site_cnt) > 0) {
         
         site_cnt <- site_cnt%>%
+          filter(date >= "2020-10-01") %>% 
           pull(is_datim_site) %>% 
           max()
         
-        pds <- (min(df_growth_ou$hfr_pd) - 1) %>% 
-          str_pad(2, pad = "0") %>% 
-        paste0("2020.",., "-", max(df_growth_ou$hfr_pd))
+        pd_start <- min(pds) %>% format.Date("%b %d")
         
         v <- df_growth_ou %>% 
           filter(countryname == ctry_sel) %>% 
           mutate(hfr_pd = str_pad(hfr_pd, 2, pad = "0"),
-                 lab = paste0(format.Date(hfr_pd_date_max, "%b %d"), " (",
+                 hfr_pd = fct_reorder(hfr_pd, date, max),
+                 lab = paste0(format.Date(date, "%b %d"), " (",
                               str_pad(hfr_pd, 2, pad = "0"), ")", 
                               ":   ", percent(delta, .1))) %>% 
           ggplot(aes(1, fct_rev(hfr_pd))) +
@@ -648,7 +648,7 @@ library(sf)
           si_style_nolines() +
           labs(x = NULL, y = NULL, 
                title = "Treatment Growth Each Period",
-               subtitle = paste0("only sites reporting in all ", pds, " periods (",
+               subtitle = paste0("only sites reporting in all periods since ", pd_start, " (",
                                  comma(site_cnt, 1),")"),
                caption = "interpolated data") +
           theme(axis.text.y = element_blank(),
@@ -668,11 +668,17 @@ library(sf)
 
 # MAP ---------------------------------------------------------------------
 
+    pds <- df_txcurr %>%
+      distinct(date) %>%
+      arrange(date) %>% 
+      top_n(6) %>% 
+      pull() 
+    
     df_repgap <- df_txcurr %>% 
-      filter(hfr_pd >=4) 
+      filter(date %in% pds) 
       
     df_repgap <- df_repgap %>%
-      mutate(pd = ifelse(hfr_pd >= 7, "post", "pre")) %>%
+      mutate(pd = ifelse(date <= nth(pds, 3), "pre", "post")) %>%
       group_by(operatingunit, countryname, orgunituid,
                mech_code, pd) %>%
       summarise(has_hfr_reporting = sum(has_hfr_reporting, na.rm = TRUE),
@@ -805,7 +811,7 @@ library(sf)
           scale_fill_manual(values = bivar_map) +
           si_style_nolines() +
           labs(x = NULL, y = NULL,
-               title = "Identifying Reporting Gaps in 2020",
+               title = "Identifying Reporting Gaps the Last 6 Months",
                subtitle = "problem areas = dark pink and purple") +
           theme_void() +
           theme(text = element_text(family = "Source Sans Pro"),
@@ -824,7 +830,7 @@ library(sf)
            scale_fill_manual(values = bivar_map) +
            si_style_nolines() +
            labs(x = NULL, y = NULL,
-                title = "Identifying Reporting Gaps",
+                title = "Identifying Reporting Gaps the Last 6 Months",
                 subtitle = "no sites with coordinates") +
            theme_void() +
            theme(text = element_text(family = "Source Sans Pro"),
@@ -884,7 +890,7 @@ library(sf)
     
 
   ctrys <- df_txcurr %>% 
-    filter(hfr_pd == 1) %>% 
+    filter(date == "2020-10-01") %>% 
     group_by(countryname) %>% 
     summarise_at(vars(mer_targets, is_datim_site), sum, na.rm = TRUE) %>% 
     ungroup() %>% 
@@ -892,7 +898,7 @@ library(sf)
     # print(n = Inf)
     pull(countryname)
   
-  # walk(ctrys[27:39], viz_combo)
+  walk(ctrys[33:40], viz_combo)
   walk(ctrys, viz_combo)
   
   viz_combo(ctrys[2])
