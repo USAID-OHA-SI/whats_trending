@@ -28,7 +28,7 @@ library(sf)
   dataout <- "Dataout"
   
   #hfr date
-  hfr_date <- "[2020-10-01]"
+  hfr_date <- "[2021-02-18]"
   
   # paste((1:12), '=', viridis_pal(direction = -1)(12))
   heatmap_pal <- c("1"  = "#FDE725FF", "2"  = "#C2DF23FF", "3"  = "#85D54AFF",
@@ -205,8 +205,16 @@ library(sf)
                                  str_pad(hfr_pd, 2, pad = "0"), ")"),
                date_lab = fct_reorder(date_lab, date))
       
+    #limit to last 13 periods
+      pds <- df_txcurr %>%
+        distinct(date) %>%
+        arrange(date) %>% 
+        top_n(13) %>% 
+        pull()
+      
     #viz completeness
       viz_comp <- df_comp %>% 
+        filter(date %in% pds) %>% 
         ggplot(aes(date_lab, fct_reorder(ou_sitecount, mer_targets, sum), fill = completeness_band)) +
         geom_tile(color = "white", size = 0.25) +
         geom_text(aes(label = percent(completeness, 1),
@@ -237,7 +245,7 @@ library(sf)
                   color = "gray50", hjust = -.2) +
         labs(subtitle = "MER Targets (USAID)",
              x = NULL, y = NULL,
-             caption = paste("Source: FY21 MER Targets [FY20Q4i] + HFR", hfr_date)) +
+             caption = paste("Source: FY21 MER Targets [FY21Q1i] + HFR", hfr_date)) +
         scale_x_continuous(expand = c(0.005, 0.005), position = "top") +
         scale_y_discrete(expand = c(0.005, 0.005)) +
         si_style_nolines() +
@@ -257,11 +265,15 @@ library(sf)
 # CONSISTENT REPORTING ----------------------------------------------------
       
     #identify the number of periods
-      pds <- unique(df_txcurr$hfr_pd) %>% length()
+      pds <- df_txcurr %>% 
+        filter(fy == max(fy)) %>% 
+        distinct(hfr_pd) %>% 
+        nrow()
       
     #identify which site x mechs had reporting every period 
       df_complete_orgunits <- df_txcurr %>% 
-        filter(hfr_results > 0) %>% 
+        filter(fy == max(fy),
+               hfr_results > 0) %>% 
         group_by(orgunituid, mech_code) %>% 
         filter(n() == pds) %>% 
         ungroup() %>% 
@@ -270,7 +282,8 @@ library(sf)
     
     #identify which site x mechs had reporting/interpoled data every period 
       df_complete_ipol_orgunits <- df_txcurr %>% 
-        filter(hfr_results_ipol > 0) %>% 
+        filter(fy == max(fy),
+               hfr_results_ipol > 0) %>% 
         group_by(orgunituid, mech_code) %>% 
         filter(n() == pds) %>% 
         ungroup() %>% 
@@ -279,6 +292,7 @@ library(sf)
       
     #get a share of sites reporting every pd
       df_complete_share <- df_txcurr %>% 
+        filter(fy == max(fy)) %>% 
         distinct(operatingunit, orgunituid) %>% 
         count(operatingunit, name = "all_sites") %>% 
         full_join(df_complete_orgunits, by = "operatingunit") %>% 
@@ -299,7 +313,7 @@ library(sf)
         geom_text(aes(label = percent(share, 1)),
                   hjust = -.1, family = "Source Sans Pro", color = "gray30") +
         labs(x = NULL, y = NULL,
-             title = paste("SHARE OF SITES BY OU REPORTING IN ALL", pds, "PERIODS"),
+             title = paste("SHARE OF SITES BY OU REPORTING IN ALL", pds, max(df_txcurr$fy),"PERIODS"),
              caption = paste("Source: HFR", hfr_date)) +
         scale_x_continuous(labels = percent, expand = c(0.005, 0.005)) +
         scale_y_discrete(expand = c(0.005, 0.005)) +
@@ -384,7 +398,7 @@ library(sf)
         geom_point(aes(group = indicator, color = indicator)) +
         facet_wrap(~ operatingunit) +
         scale_y_continuous(label = percent, breaks = c(0,.5,1)) +
-        scale_x_date(date_breaks = "2 month", date_labels = "%b") +
+        scale_x_date(date_breaks = "3 month", date_labels = "%b") +
         scale_color_manual(values = c(heatmap_pal[10], "gray80"),
                            labels = c("+3 months","<3 months")) +
         si_style_ygrid() +
@@ -405,7 +419,8 @@ library(sf)
       
     #filter to where reporting is greater than 0 and for all pds
       df_txcurr_comp <- df_txcurr %>% 
-        filter(hfr_results_ipol > 0) %>% 
+        filter(fy == max(fy),
+               hfr_results_ipol > 0) %>% 
         group_by(orgunituid, mech_code) %>% 
         filter(n() == pds) %>% 
         ungroup()
@@ -421,7 +436,7 @@ library(sf)
         group_by(operatingunit) %>% 
         mutate(growth = (hfr_results_ipol - lag(hfr_results_ipol, order_by = hfr_pd)) / lag(hfr_results_ipol, order_by = hfr_pd)) %>% 
         ungroup() %>% 
-        filter(date != "2019-09-30") %>% 
+        filter(date != min(date)) %>% 
         mutate(ou_count = paste0(operatingunit, " (", comma(n, 1), ")"))
       
     #clean up period
@@ -437,7 +452,7 @@ library(sf)
         geom_hline(yintercept = 0, color = "gray40") +
         facet_wrap(~ fct_reorder(ou_count, mer_targets, sum, .desc = TRUE), scales = "free_y") +
         scale_y_continuous(labels = percent_format(.1)) +
-        scale_x_date(date_breaks = "8 weeks", date_labels = "%b %d") +
+        # scale_x_date(date_breaks = "4 weeks", date_labels = "%b %d") +
         scale_fill_manual(values = c(heatmap_pal[6], "#433E85FF")) +
         # scale_fill_manual(values = c(posneg_pal[1], posneg_pal[3])) +
         labs(x = NULL, y = NULL,
@@ -472,9 +487,15 @@ library(sf)
                                              completeness <= 1 ~ round(completeness/.1, 0),
                                              !is.na(completeness) ~ 12) #%>% as.character
         )
-    #clean up pd
-      # df_trends_ctry <- df_trends_ctry %>% 
-      #   mutate(hfr_pd = as.integer(hfr_pd)) 
+      
+    #limit to last 13 periods
+      pds <- df_txcurr %>%
+        distinct(date) %>%
+        arrange(date) %>% 
+        top_n(13) %>% 
+        pull() 
+      
+      df_trends_ctry <- filter(df_trends_ctry, date %in% pds)
       
     #setup range
       df_trends_ctry <- df_trends_ctry %>% 
@@ -553,6 +574,15 @@ library(sf)
       mutate(date_lab = paste0(format.Date(date, "%b %d"), "\n(",
                                str_pad(hfr_pd, 2, pad = "0"), ")"),
              date_lab = fct_reorder(date_lab, date))
+    
+    #limit to last 13 periods
+    pds <- df_txcurr %>%
+      distinct(date) %>%
+      arrange(date) %>% 
+      top_n(13) %>% 
+      pull() 
+    
+    df_rpt_sites <- filter(df_rpt_sites, date %in% pds)
     
     
     viz_rpt_rates <- function(ctry_sel) {
@@ -805,6 +835,7 @@ library(sf)
       #hex map
         m <- df_mapdata %>% 
           filter(!is.na(id)) %>% 
+          mutate(position = ifelse(str_detect(position, "NA"), NA_character_, position)) %>% 
           ggplot() +
           geom_sf(aes(fill = position), color = 'gray80') +
           geom_sf(data = ctry_adm1, fill = NA, size = 1, color = "gray60") +
@@ -823,23 +854,29 @@ library(sf)
                 panel.grid = element_blank())
         
       } else {
-         m <- ctry_hex %>% 
-           ggplot() +
-           geom_sf(color = 'gray80', fill = NA) +
-           geom_sf(data = ctry_adm1, fill = NA, size = 1, color = "gray60") +
-           scale_fill_manual(values = bivar_map) +
-           si_style_nolines() +
-           labs(x = NULL, y = NULL,
-                title = "Identifying Reporting Gaps the Last 6 Months",
-                subtitle = "no sites with coordinates") +
-           theme_void() +
-           theme(text = element_text(family = "Source Sans Pro"),
-                 legend.position = "none",
-                 plot.title = element_text(size = 11, color = "gray30"),
-                 plot.subtitle = element_text(size = 7),
-                 axis.text.x = element_blank(),
-                 axis.text.y = element_blank(),
-                 panel.grid = element_blank())
+        
+        #clip hexes to country border
+        suppressWarnings(
+          ctry_hex <- st_intersection(ctry_hex, ctry_adm0) 
+        )
+        
+        m <- ctry_hex %>% 
+          ggplot() +
+          geom_sf(color = 'gray80', fill = NA) +
+          geom_sf(data = ctry_adm1, fill = NA, size = 1, color = "gray60") +
+          scale_fill_manual(values = bivar_map) +
+          si_style_nolines() +
+          labs(x = NULL, y = NULL,
+               title = "Identifying Reporting Gaps the Last 6 Months",
+               subtitle = "no sites with coordinates") +
+          theme_void() +
+          theme(text = element_text(family = "Source Sans Pro"),
+                legend.position = "none",
+                plot.title = element_text(size = 11, color = "gray30"),
+                plot.subtitle = element_text(size = 7),
+                axis.text.x = element_blank(),
+                axis.text.y = element_blank(),
+                panel.grid = element_blank())
       }
         
         return(m)
@@ -867,13 +904,14 @@ library(sf)
         p4 <- plot_spacer()
       
       combo <- p3 + (p1 / (p2 + p4  & theme(strip.placement = NULL))) +
+        plot_layout(widths = c(4, 6)) +
         plot_annotation(
           title = paste(toupper(ctry_sel), "| ASSESSING COVID’S IMPACT THROUGH HFR"),
           caption = 'HFR DATA | NOT FOR DISTRIBUTION OUTSIDE USAID'
         ) & 
         theme(text = element_text(family = "Source Sans Pro"),
               plot.title = element_text(face = "bold"),
-              plot.caption = element_text(color = "gray30"))
+              plot.caption = element_text(color = "gray30")) 
       
       ctry_sel <- str_remove_all(ctry_sel, " ")
       
@@ -886,7 +924,7 @@ library(sf)
     
     }
     
-    viz_combo("Tanzania")
+    viz_combo("Indonesia")
     
 
   ctrys <- df_txcurr %>% 
@@ -898,7 +936,7 @@ library(sf)
     # print(n = Inf)
     pull(countryname)
   
-  walk(ctrys[33:40], viz_combo)
+  # walk(ctrys[33:40], viz_combo)
   walk(ctrys, viz_combo)
   
   viz_combo(ctrys[2])
