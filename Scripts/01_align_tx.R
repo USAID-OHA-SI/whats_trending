@@ -4,7 +4,7 @@
 ## PURPOSE:  align FY20 HFR data
 ## NOTE:     migrated over from pump_up_the_jam
 ## DATE:     2020-05-05
-## UPDATED:  2020-12-11
+## UPDATED:  2021-05-04
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -44,7 +44,7 @@ dataout <- "Dataout"
     
   #drop where all missing
     df_tx <- df_tx %>% 
-      filter_at(vars(mer_targets, mer_results, val), dplyr::any_vars(!is.na(.) & .!=0))
+      filter_at(vars(mer_targets, mer_results, val), dplyr::any_vars(!is.na(.)))
     
   #adjust MMD disagg to be an full indicator
     df_tx <- df_tx %>% 
