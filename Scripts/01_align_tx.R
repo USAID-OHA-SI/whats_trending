@@ -42,6 +42,10 @@ dataout <- "Dataout"
 
 # CLEAN -------------------------------------------------------------------
     
+  #drop where all missing
+    df_tx <- df_tx %>% 
+      filter_at(vars(mer_targets, mer_results, val), dplyr::any_vars(!is.na(.) & .!=0))
+    
   #adjust MMD disagg to be an full indicator
     df_tx <- df_tx %>% 
       mutate(indicator = case_when(indicator == "TX_MMD" & str_detect(otherdisaggregate, "3( |m)") ~ "TX_MMD.u3",
