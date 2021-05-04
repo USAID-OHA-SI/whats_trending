@@ -3,7 +3,7 @@
 ## LICENSE:  MIT
 ## PURPOSE:  review and visualize TX_CURR HFR data
 ## DATE:     2020-05-13
-## UPDATED:  2020-12-10
+## UPDATED:  2021-05-04
 
 
 # DEPENDENCIES ------------------------------------------------------------
@@ -20,6 +20,7 @@ library(RColorBrewer)
 library(COVIDutilities)
 library(rnaturalearth)
 library(sf)
+library(lubridate)
 
 
 # GLOBAL VARIABLES --------------------------------------------------------
@@ -28,7 +29,7 @@ library(sf)
   dataout <- "Dataout"
   
   #hfr date
-  hfr_date <- "[2021-02-18]"
+  hfr_date <- "[2021-04-26]"
   
   # paste((1:12), '=', viridis_pal(direction = -1)(12))
   heatmap_pal <- c("1"  = "#FDE725FF", "2"  = "#C2DF23FF", "3"  = "#85D54AFF",
@@ -488,6 +489,16 @@ library(sf)
                                              !is.na(completeness) ~ 12) #%>% as.character
         )
       
+    #ensure only getting results from current
+      df_trends_ctry <- df_trends_ctry %>% 
+        mutate(fiscal_year = quarter(date, with_year = TRUE, fiscal_start = 10) %>% 
+                 str_sub(end = 4) %>% 
+                 as.integer(),
+               mer_results = ifelse(fiscal_year == max(fiscal_year), mer_results, 0)) %>% 
+        group_by(countryname) %>% 
+        mutate(mer_results = max(mer_results)) %>% 
+        ungroup()
+      
     #limit to last 13 periods
       pds <- df_txcurr %>%
         distinct(date) %>%
@@ -529,7 +540,7 @@ library(sf)
         labs(x = NULL, y = NULL, color = "Completeness (0% - 100%)",
              title = "Current on Treatment Trends Pre/Post COVID",
              subtitle = "site completeness indicated at base",
-             caption = "dotted line identifies FY20Q1 reported value") +
+             caption = "dotted line identifies FY21Q1 reported value") +
         si_style_ygrid() +
         theme(plot.title = element_text(size = 11, color = "gray30"),
               plot.subtitle = element_text(size = 7),
